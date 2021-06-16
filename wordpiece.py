@@ -45,16 +45,15 @@ def read_vocab():
     return vocab, reverse_vocab, logprobs
 
 
-
-
-if __name__ == '__main__':
-    args = docopt(__doc__, version='Fruit Fly Hashing, sentencepiece 0.1')
-
-    vocab, reverse_vocab, logprobs = read_vocab()
-    out_file = open("./20_newsgroup.sp", 'w')
+def output_wordpieces(train=True):
+    if train:
+        out_file = open("./datasets/20news-bydate/20news-bydate-train.sp", 'w')
+        base_dir = "./datasets/20news-bydate/20news-bydate-train"
+    else:
+        out_file = open("./datasets/20news-bydate/20news-bydate-test.sp", 'w')
+        base_dir = "./datasets/20news-bydate/20news-bydate-test"
 
     # get folders in 20_newsgroup corpus
-    base_dir = "/home/aurelie.herbelot/Corpora/20_newsgroup/"
     folders = os.listdir(base_dir)
     print(folders)
 
@@ -77,3 +76,14 @@ if __name__ == '__main__':
             out_file.write(' '.join([wp for wp in ll])+'\n')
             out_file.write("</doc>\n")
     out_file.close()
+
+
+
+if __name__ == '__main__':
+    args = docopt(__doc__, version='Fruit Fly Hashing, sentencepiece 0.1')
+
+    vocab, reverse_vocab, logprobs = read_vocab()
+    print("Computing wordpieces for training set...")
+    output_wordpieces(train=True)
+    print("Computing wordpieces for test set...")
+    output_wordpieces(train=False)
