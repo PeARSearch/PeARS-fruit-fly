@@ -136,7 +136,7 @@ def train_model(m_train,classes_train,m_val,classes_val,ids_train,ids_val,hidden
     return np.max(validation_scores)
 
 def prepare_data(tr_file):
-    dev_file = tr_file.replace("train","dev")
+    dev_file = tr_file.replace("train","test")
 
     print("Reading dataset...")
     m_train = pickle.load(open(tr_file,'rb')).todense()

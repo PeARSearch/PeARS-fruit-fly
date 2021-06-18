@@ -8,7 +8,7 @@ Usage:
 Options:
   -h --help                       Show this screen.
   --version                       Show version.
-  --file=<filename>               Name of file with .wet file paths
+  --file=<filename>               Name of file to process
   --dir=<dir>                     Directory containing projections
   --topwords=<n>                  Percentage of document tokens to retain
   --wta=<n>                       Percentage of KCs to retain
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     keywords = {}
 
     in_file_path = args["--file"]
-    in_file = in_file_path.replace("data/","")
+    in_file = in_file_path.replace("datasets/20news-bydate/","")
     params = ".top"+str(top_tokens)+".wta"+str(percent_hash)
 
     hs_file = os.path.join(d,in_file.replace('.sp',params+'.hs'))
