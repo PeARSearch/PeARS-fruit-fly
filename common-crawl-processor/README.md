@@ -1,5 +1,5 @@
 ### Common-crawl-processor
-It's a pipeline to deal with web documents from Common Crawl. It selects documents from a pre-determined language, pre-process them and removes samples with unwanted content. 
+It's a pipeline to deal with web documents from Common Crawl. It selects documents from a pre-determined language, pre-processes them and removes samples with unwanted content. 
 
 ### Getting raw text out of Common Crawl dumps
 
