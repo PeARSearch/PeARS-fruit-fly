@@ -1,3 +1,6 @@
+### Common-crawl-processor
+It's a pipeline to deal with web documents from Common Crawl. It selects documents from a pre-determined language, pre-process them and removes samples with unwanted content. 
+
 ### Getting raw text out of Common Crawl dumps
 
 We will be using the .wet files from Common Crawl. For more information on the WET format, please consult [...].
