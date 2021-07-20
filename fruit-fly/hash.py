@@ -31,14 +31,14 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 # makes segmenter instance and loads the model file (m.model)
 sp = spm.SentencePieceProcessor()
-sp.load('spmcc.model')
+sp.load('../spmcc.model')
 
 def read_vocab():
     c = 0
     vocab = {}
     reverse_vocab = {}
     logprobs = []
-    with open("spmcc.vocab") as f:
+    with open("../spmcc.vocab") as f:
         for l in f:
             l = l.rstrip('\n')
             wp = l.split('\t')[0]
@@ -57,7 +57,7 @@ def read_projections(d):
     c = 0
     projections = {}
     pn_to_kc = {}
-    with open(os.path.join(d,"spmcc.projs")) as f:
+    with open(d) as f:
         for l in f:
             l=l.rstrip('\n')
             p = np.array([int(n) for n in l.split()])
@@ -86,7 +86,7 @@ def show_projections(hashed_kenyon,reverse_vocab):
     print("BEST PNS", sorted(important_words, key=important_words.get, reverse=True)[:proj_size])
 
 
-def projection(projection_layer):
+def projection(projection_layer, KC_size, pn_to_kc, projection_functions):
     kenyon_layer = np.zeros(KC_size)
     nzs = np.where(projection_layer > 0)
     kcs = []
@@ -103,6 +103,7 @@ def projection(projection_layer):
             kenyon_layer[cell]+=projection_layer[pn]
     return kenyon_layer
 
+
 def wta(layer,percent):
     activations = np.zeros(len(layer))
     top = int(percent * len(layer) / 100)
@@ -111,12 +112,14 @@ def wta(layer,percent):
         activations[cell] = layer[cell]
     return activations
 
-def hash_input(vec,reverse_vocab,percent_hash):
-    kenyon_layer = projection(vec)
+
+def hash_input(vec, reverse_vocab, percent_hash, KC_size, pn_to_kc, projection_functions):
+    kenyon_layer = projection(vec, KC_size, pn_to_kc, projection_functions)
     hashed_kenyon = wta(kenyon_layer,percent_hash)
     #show_projections(hashed_kenyon,reverse_vocab)
     return hashed_kenyon
- 
+
+
 def return_keywords(vec):
     keywords = []
     vs = np.argsort(vec)
@@ -193,7 +196,7 @@ if __name__ == '__main__':
                 vec = wta(vec,top_tokens)
                 #print("Hashing...")
                 #t.start()
-                hs = hash_input(vec,reverse_vocab,percent_hash)
+                hs = hash_input(vec,reverse_vocab,percent_hash, KC_size, pn_to_kc, projection_functions)
                 #t.stop()
                 hs = coo_matrix(hs)
                 #print(IDs[-1],' '.join([str(i) for i in hs.col]))
@@ -211,11 +214,11 @@ if __name__ == '__main__':
                 doc+=l+' '
     M = coo_matrix((M_data, (M_row, M_col)), shape=(n_doc, KC_size))
 
-with open(hs_file,"wb") as hsf:
-    pickle.dump(M,hsf)
-with open(ID_file,"wb") as IDf:
-    pickle.dump(IDs,IDf)
-with open(keyword_file,"wb") as kf:
-    pickle.dump(keywords,kf)
-with open(class_file,"wb") as cf:
-    pickle.dump(classes,cf)
+    with open(hs_file,"wb") as hsf:
+        pickle.dump(M,hsf)
+    with open(ID_file,"wb") as IDf:
+        pickle.dump(IDs,IDf)
+    with open(keyword_file,"wb") as kf:
+        pickle.dump(keywords,kf)
+    with open(class_file,"wb") as cf:
+        pickle.dump(classes,cf)

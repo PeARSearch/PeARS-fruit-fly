@@ -38,7 +38,7 @@ def read_vocab():
     return vocab, reverse_vocab, logprobs
 
 
-def create_projections(PN_size, KC_size, proj_size,d):
+def create_projections(PN_size, KC_size, proj_size,d, trial):
     print("Creating",KC_size,"projections...")
     projection_functions = {}
     idx = list(range(PN_size))
@@ -51,7 +51,7 @@ def create_projections(PN_size, KC_size, proj_size,d):
             p = idx[i:i+proj_size]
             potential_projections.append(p)
 
-    f=open(os.path.join(d,"spmcc.projs"),'w')
+    f=open(os.path.join(d,"spmcc_"+str(trial)+".projs"),'w')
     for cell in range(KC_size):
         p = np.array(potential_projections[cell])
         projection_functions[cell] = p
@@ -60,7 +60,7 @@ def create_projections(PN_size, KC_size, proj_size,d):
             pw+=str(i)+' '
         f.write(pw[:-1]+'\n')
     f.close()
-    return projection_functions
+    return str(os.path.join(d,"spmcc_"+str(trial)+".projs")) #projection_functions
 
 
 if __name__ == '__main__':
@@ -74,5 +74,5 @@ if __name__ == '__main__':
 
     d = "models/kc"+str(KC_size)+"-p"+str(proj_size)
     os.mkdir(d)
-    projection_functions = create_projections(PN_size, KC_size, proj_size,d)
+    projection_functions = create_projections(PN_size, KC_size, proj_size,d, trial=0)
 

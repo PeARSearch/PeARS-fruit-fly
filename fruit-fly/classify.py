@@ -55,7 +55,7 @@ class MLP(nn.Module):
 
 def make_output(classes):
     classes = list(classes.values())
-    outm = np.zeros((len(classes),20))
+    outm = np.zeros((len(classes), len(set(classes)))) ###########################################
     single_classes = list(set(classes))
     for i in range(len(classes)):
         outm[i][single_classes.index(classes[i])] = 1
@@ -83,13 +83,13 @@ def validate(net,ids_val,m_val,classes_val,batch_size):
 
     val_pred_score = sum(1 for x,y in zip(val_predictions,val_golds) if x == y) / len(val_golds)
 
-    print("VAL PRED SCORE:",val_pred_score)
+    #print("VAL PRED SCORE:",val_pred_score)
     return val_pred_score
 
 def train_model(m_train,classes_train,m_val,classes_val,ids_train,ids_val,hiddensize,lrate,wdecay,batchsize,epochs,checkpointsdir):
     '''Initialise network'''
     net = MLP(m_train.shape[1],hiddensize,classes_train.shape[1])
-    optimizer = torch.optim.Adam(net.parameters(), lr=lrate, weight_decay=wdecay)   
+    optimizer = torch.optim.Adam(net.parameters(), lr=lrate, weight_decay=wdecay)
     criterion = nn.MSELoss()
 
     total_loss = 0.0
@@ -140,20 +140,19 @@ def prepare_data(tr_file):
 
     print("Reading dataset...")
     m_train = pickle.load(open(tr_file,'rb')).todense()
-    print(m_train)
+    #print(m_train)
     #m_train = preprocessing.normalize(m_train, norm='l1')
     m_val = pickle.load(open(dev_file,'rb')).todense()
-    print(m_val)
+    #print(m_val)
     #m_val = preprocessing.normalize(m_val, norm='l1')
 
-    classes_train = make_output(pickle.load(open(tr_file.replace("hs","cls"),'rb'))) 
+    classes_train = make_output(pickle.load(open(tr_file.replace("hs","cls"),'rb')))
     classes_val = make_output(pickle.load(open(dev_file.replace("hs","cls"),'rb')))
 
     ids_train = np.array([i for i in range(m_train.shape[0])])
     ids_val = np.array([i for i in range(m_val.shape[0])])
 
     return m_train,classes_train,m_val,classes_val,ids_train,ids_val
-
 
 if __name__ == '__main__':
     checkpointsdir = ""
