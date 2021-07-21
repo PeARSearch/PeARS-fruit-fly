@@ -55,7 +55,7 @@ class MLP(nn.Module):
 
 def make_output(classes):
     classes = list(classes.values())
-    outm = np.zeros((len(classes), len(set(classes)))) ###########################################
+    outm = np.zeros((len(classes), len(set(classes))))  ####################
     single_classes = list(set(classes))
     for i in range(len(classes)):
         outm[i][single_classes.index(classes[i])] = 1
@@ -83,7 +83,7 @@ def validate(net,ids_val,m_val,classes_val,batch_size):
 
     val_pred_score = sum(1 for x,y in zip(val_predictions,val_golds) if x == y) / len(val_golds)
 
-    #print("VAL PRED SCORE:",val_pred_score)
+    # print("VAL PRED SCORE:",val_pred_score)
     return val_pred_score
 
 def train_model(m_train,classes_train,m_val,classes_val,ids_train,ids_val,hiddensize,lrate,wdecay,batchsize,epochs,checkpointsdir):
@@ -136,9 +136,9 @@ def train_model(m_train,classes_train,m_val,classes_val,ids_train,ids_val,hidden
     return np.max(validation_scores)
 
 def prepare_data(tr_file):
-    dev_file = tr_file.replace("train","test")
+    dev_file = tr_file.replace("train","val")
 
-    print("Reading dataset...")
+    # print("Reading dataset...")
     m_train = pickle.load(open(tr_file,'rb')).todense()
     #print(m_train)
     #m_train = preprocessing.normalize(m_train, norm='l1')

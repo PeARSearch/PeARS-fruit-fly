@@ -1,18 +1,18 @@
 """Hyper-parameter search by Bayesian optimization
 Usage:
-  hyperparam_search.py --train_path=<filename> --num_iter=<n>
+  hyperparam_search.py --train_path=<filename> --num_iter=<n> --n_run_classify=<n> [--continue_log=<filename>]
   hyperparam_search.py (-h | --help)
   hyperparam_search.py --version
 Options:
   -h --help                       Show this screen.
   --version                       Show version.
   --train_path=<filename>         Name of file to train (processed by sentencepeice)
-  --dir=<dir>                     Number of iterations in Bayesian optimization
+  --num_iter=<n>                  Number of iterations in Bayesian optimization
+  --n_run_classify=<n>            Number of runs in classification to take the average
+  [--continue_log=<filename>]     Name of the json log file that we want the Bayesian optimization continues
 """
 
 
-
-import glob
 import os
 import shutil
 import re
@@ -20,6 +20,7 @@ import pickle
 import torch
 import sentencepiece as spm
 import numpy as np
+from datetime import datetime
 from docopt import docopt
 from scipy.sparse import coo_matrix
 from sklearn.feature_extraction.text import CountVectorizer
@@ -134,6 +135,7 @@ def hash(model_file, in_file_path, output_dir, top_tokens, percent_hash):
 def classify(tr_file, lrate, batchsize, epochs, hiddensize, wdecay, n_run_classify):
     tr_file = tr_file.replace('./', '')
     dataset_name = tr_file.split('/')[-1].split('-')[0]
+    now = datetime.now()
 
     checkpointsdir = ""
     m_train,classes_train,m_val,classes_val,ids_train,ids_val = prepare_data(tr_file)
@@ -152,7 +154,8 @@ def classify(tr_file, lrate, batchsize, epochs, hiddensize, wdecay, n_run_classi
         wta = tmp[5][3:]
         mean = val_scores.mean()
         std = val_scores.std()
-        l = '\t'.join([dataset_name, kc, size, trial, top, wta, str(mean), str(std)])
+        l = '\t'.join([now.strftime("%Y-%m-%d %H:%M:%S"), dataset_name,
+                       kc, size, trial, top, wta, str(mean), str(std)])
         f.writelines(l + '\n')
 
     return mean
@@ -165,7 +168,7 @@ def fruitfly_pipeline(train_path, topword, KC_size, proj_size, percent_hash, n_r
     print('hashing files')
     hash_file = hash(model_file=model_file, in_file_path=train_path,
                      output_dir='./tmp', top_tokens=topword, percent_hash=percent_hash)
-    val_path = train_path.replace('train', 'test')
+    val_path = train_path.replace('train', 'val')
     hash(model_file=model_file, in_file_path=val_path,
          output_dir='./tmp', top_tokens=topword, percent_hash=percent_hash)
     print('training and evaluating')
@@ -176,7 +179,7 @@ def fruitfly_pipeline(train_path, topword, KC_size, proj_size, percent_hash, n_r
     return val_score
 
 
-def optimize_fruitfly(train_path, num_iter, n_run_classify):
+def optimize_fruitfly(train_path, num_iter, n_run_classify, continue_log=''):
     def classify_val(topword, KC_size, proj_size, percent_hash):
         topword = round(topword)
         KC_size = round(KC_size)
@@ -195,8 +198,9 @@ def optimize_fruitfly(train_path, num_iter, n_run_classify):
 
     logger = JSONLogger(path="./log/logs.json")
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
-    load_logs(optimizer, logs=["./log/old_logs.json"])
-    print("Optimizer is now aware of {} points.".format(len(optimizer.space)))
+    if continue_log:
+        load_logs(optimizer, logs=[continue_log])
+        print("Optimizer is now aware of {} points.".format(len(optimizer.space)))
 
     optimizer.maximize(n_iter=num_iter)
 
@@ -204,10 +208,14 @@ def optimize_fruitfly(train_path, num_iter, n_run_classify):
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='Hyper-parameter search by Bayesian optimization 0.1')
+    args = docopt(__doc__, version='Hyper-parameter search by Bayesian optimization, ver 0.1')
     train_path = args["--train_path"]
     num_iter = int(args["--num_iter"])
     n_run_classify = int(args["--n_run_classify"])
+    continue_log = args["--continue_log"]
     #torch.set_num_threads(1)
-    optimize_fruitfly(train_path, num_iter, n_run_classify)
+    if continue_log:
+        optimize_fruitfly(train_path, num_iter, n_run_classify, continue_log)
+    else:
+        optimize_fruitfly(train_path, num_iter, n_run_classify)
 

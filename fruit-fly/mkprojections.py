@@ -23,7 +23,7 @@ def read_vocab():
     vocab = {}
     reverse_vocab = {}
     logprobs = []
-    with open("spmcc.vocab") as f:
+    with open("../spmcc.vocab") as f:
         for l in f:
             l = l.rstrip('\n')
             wp = l.split('\t')[0]

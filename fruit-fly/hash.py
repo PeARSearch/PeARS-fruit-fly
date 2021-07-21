@@ -21,6 +21,7 @@ import random
 import pickle
 import numpy as np
 import time
+import pathlib
 from timer import Timer
 from docopt import docopt
 import sentencepiece as spm
@@ -162,13 +163,15 @@ if __name__ == '__main__':
     keywords = {}
 
     in_file_path = args["--file"]
-    in_file = in_file_path.replace("datasets/20news-bydate/","")
-    params = ".top"+str(top_tokens)+".wta"+str(percent_hash)
+    in_file = in_file_path.split('/')[-1]
+    trial = d.split('.')[0].split('_')[1]
+    params = '.kc'+str(KC_size) + '.size'+str(proj_size) + '.trial'+str(trial) + ".top"+str(top_tokens)+".wta"+str(percent_hash)
 
-    hs_file = os.path.join(d,in_file.replace('.sp',params+'.hs'))
-    ID_file = os.path.join(d,in_file.replace('.sp',params+'.ids'))
-    class_file = os.path.join(d,in_file.replace('.sp',params+'.cls'))
-    keyword_file = os.path.join(d,in_file.replace('.sp',params+'.kwords'))
+    pathlib.Path('./tmp').mkdir(parents=True, exist_ok=True)
+    hs_file = os.path.join('tmp', in_file.replace('.sp',params+'.hs')).replace('.projs/', '')
+    ID_file = os.path.join('tmp', in_file.replace('.sp',params+'.ids')).replace('.projs/', '')
+    class_file = os.path.join('tmp', in_file.replace('.sp',params+'.cls')).replace('.projs/', '')
+    keyword_file = os.path.join('tmp', in_file.replace('.sp',params+'.kwords')).replace('.projs/', '')
 
 
     with open(in_file_path,'r') as f:
