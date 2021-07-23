@@ -32,7 +32,7 @@ You should see the file being processed:
     
 We are going to use the OCTIS library to remove unwanted content. First, we need to transform the .xml files into .txt.
 
-     python3 transform_into_txt.py --folder=processed_wet
+     python3 transform_into_txt.py --foldertxt=processed_wet
      
 We take a sample from .wet processed documents in order to train the topic model (LDA) that will detect unwanted content. 
 
