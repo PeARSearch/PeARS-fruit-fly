@@ -1,14 +1,14 @@
 """Common Crawl processor - transformation of zipped .xml files into .txt files
 
 Usage:
-  transform_into_txt.py --folder=<foldername>
+  transform_into_txt.py --foldertxt=<foldername>
   transform_into_txt.py (-h | --help)
   transform_into_txt.py --version
 
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --folder=<foldername>     Only the name of the folder where the zipped .xml files are located
+  --foldertxt=<foldername>     Only the name of the folder where the zipped .xml files are located
 
 """
 
@@ -61,7 +61,7 @@ def transform_xml_into_txt(f_globs, folder):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder = args['--folder']
+    folder = args['--foldertxt']
 
     f_globs= glob.glob("./"+folder+"/*.gz")
     transform_xml_into_txt(f_globs, folder)
