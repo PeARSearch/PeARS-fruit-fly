@@ -29,3 +29,19 @@ You should see the file being processed:
     385 documents processed 100 documents added...
     387 documents processed 100 documents added...
     768 documents processed 200 documents added...
+    
+We are going to use the OCTIS library to remove unwanted content. First, we need to transform the .xml files into .txt.
+
+     python3 transform_into_txt.py --folder=processed_wet
+     
+We take a sample from .wet processed documents in order to train the topic model (LDA) that will detect unwanted content. 
+
+     python3 preprocess_octis.py --foldertxt=processed_wet --ndocs=60000 --pathdataset=octis
+     
+Then, we are ready to run the LDA model. 
+
+     python3 lda_octis.py --pathdataset=octis --outputfile=lda_model
+     
+
+     
+
