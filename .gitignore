@@ -105,3 +105,6 @@ venv.bak/
 
 # dataset
 datasets/20news-bydate/
+
+# models
+models/kc*
