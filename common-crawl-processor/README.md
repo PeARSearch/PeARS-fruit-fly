@@ -48,7 +48,7 @@ The code below saves this dictionary into a .npz file.
      
 Now we can have a look at the top k topics that have been assigned for the documents. We can focus on one word in particular to see how well the model assigns topics to the documents. 
 
-     python3 topk_octis.py --pathdataset=test --foldertxt=processed_wet --topk=3 --lda_model=lda_model --word=music
+     python3 topk_octis.py --pathdataset=test --foldertxt=processed_wet --topk=3 --lda_model=lda_model --word=computer
 
 
 
