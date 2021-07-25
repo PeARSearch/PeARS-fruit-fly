@@ -37,7 +37,12 @@ would create random projections of size 10, going into a Kenyon Cell layer of 20
 
 We will now compute document hashes with our random projections. Here is an example usage.
 
+on the train set:
+
     python3 hash.py --file=datasets/20news-bydate/20news-bydate-train.sp --dir=models/kc2000-p10/ --topwords=100 --wta=10
+
+and on the test set:
+    python3 hash.py --file=datasets/20news-bydate/20news-bydate-test.sp --dir=models/kc2000-p10/ --topwords=100 --wta=10
 
 ## Train/test a network to classify documents
 
