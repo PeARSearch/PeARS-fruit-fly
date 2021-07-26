@@ -36,7 +36,7 @@ We are going to use the [OCTIS library](https://github.com/MIND-Lab/OCTIS) to re
      
 We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. 
 
-     python3 preprocess_octis.py --foldertxt=processed_wet --ndocs=60000 --pathdataset=octis
+     python3 preprocess_octis.py --foldertxt=processed_wet --ndocs=70000 --pathdataset=octis
      
 Then, we are ready to train the LDA model. As explained in the documentation of OCTIS, the output is a dictionary with:
 * topics: the list of the most significative words for each topic (list of lists of strings).
