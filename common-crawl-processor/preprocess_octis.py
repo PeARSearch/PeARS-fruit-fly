@@ -48,7 +48,7 @@ def preprocess(folder_txt, folder_dataset):
     tic = time.time()
 
     print("Initialize pre-processing")
-    preprocessor = Preprocessing(vocabulary=None, max_features=None, min_df=0.0015, max_df=0.5,
+    preprocessor = Preprocessing(vocabulary=None, max_features=None, min_df=0.002, max_df=0.5,
                                  remove_punctuation=True, punctuation=string.punctuation,
                                  lemmatize=False, stopword_list='english',
                                  min_chars=1, min_words_docs=0)
