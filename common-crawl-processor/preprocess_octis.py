@@ -21,14 +21,13 @@ import csv
 import sys
 import glob
 from octis.preprocessing.preprocessing import Preprocessing
-import codecs
 import time
 from docopt import docopt
 csv.field_size_limit(sys.maxsize)
 
 def get_n_docs(folder, n_docs):
     globs = glob.glob("./"+folder+"/*.txt")
-    f_in = codecs.open("./"+folder+"/docs_octis.txt", 'a', encoding='utf8')
+    f_in = open("./"+folder+"/docs_octis.txt", 'a', encoding='utf8')
     n=0
     for file in globs:
       f_read = open(file, 'r', encoding="utf-8")
