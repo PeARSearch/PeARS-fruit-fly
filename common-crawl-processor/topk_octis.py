@@ -1,4 +1,4 @@
-"""Common Crawl processor - retrieve the top k topics associated with the documents
+"""Common Crawl processor - retrieve the top k topics with a specific keyword associated with the documents
 
 Usage:
   topk_octis.py --pathdataset=<foldername> --foldertxt=<foldername> --topk=<highestktopics> --lda_model=<filename> --word=<word>
