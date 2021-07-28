@@ -12,6 +12,7 @@ Options:
 
 
 import os
+import re
 # import torch
 import pathlib
 import joblib
@@ -20,9 +21,10 @@ import numpy as np
 from datetime import datetime
 from docopt import docopt
 from sklearn.feature_extraction.text import CountVectorizer
+from scipy.sparse import csr_matrix
 
 from mkprojections import create_projections
-from hash import read_vocab, hash_dataset, read_n_encode_dataset
+from hash import read_vocab, hash_dataset
 from classify import train_model
 
 from bayes_opt import BayesianOptimization
@@ -38,6 +40,31 @@ def generate_projs(KC_size, proj_size):
     trial = len(os.listdir(d))
     model_file = create_projections(PN_size, KC_size, proj_size, d, trial)
     return model_file
+
+
+def read_n_encode_dataset(path):
+    # read
+    doc_list, label_list = [], []
+    doc = ""
+    with open(path) as f:
+        for l in f:
+            l = l.rstrip('\n')
+            if l[:4] == "<doc":
+                m = re.search(".*class=([^ ]*)>", l)
+                label = m.group(1)
+                label_list.append(label)
+            elif l[:5] == "</doc":
+                doc_list.append(doc)
+                doc = ""
+            else:
+                doc += l + ' '
+
+    # encode
+    X = vectorizer.fit_transform(doc_list)
+    X = csr_matrix(X)
+    X = X.multiply(logprobs)
+
+    return X, label_list
 
 
 def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
@@ -76,7 +103,7 @@ def optimize_fruitfly(continue_log):
         proj_size = round(proj_size)
         percent_hash = round(percent_hash)
         C = round(C)
-        num_iter = 10
+        num_iter = 1000
         return fruitfly_pipeline(topword, KC_size, proj_size, percent_hash,
                                  C, num_iter, optimizer.max)
 
@@ -95,7 +122,7 @@ def optimize_fruitfly(continue_log):
     logger = JSONLogger(path=tmp_log_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-    optimizer.maximize(init_points=2, n_iter=2)
+    optimizer.maximize(n_iter=200)
     print("Final result:", optimizer.max)
     with open(main_log_path, 'a') as f_main:
         with open(tmp_log_path) as f_tmp:
