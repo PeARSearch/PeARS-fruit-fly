@@ -72,7 +72,7 @@ if __name__ == '__main__':
     KC_size = int(args["--kc"])
     proj_size = int(args["--size"])
 
-    d = "models/kc"+str(KC_size)+"-p"+str(proj_size)
+    d = "models/projection/kc"+str(KC_size)+"-p"+str(proj_size)
     os.mkdir(d)
     projection_functions = create_projections(PN_size, KC_size, proj_size,d, trial=0)
 
