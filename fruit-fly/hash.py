@@ -86,31 +86,6 @@ def show_projections(hashed_kenyon, reverse_vocab):
     print("BEST PNS", sorted(important_words, key=important_words.get, reverse=True)[:proj_size])
 
 
-def read_n_encode_dataset(path):
-    # read
-    doc_list, label_list = [], []
-    doc = ""
-    with open(path) as f:
-        for l in f:
-            l = l.rstrip('\n')
-            if l[:4] == "<doc":
-                m = re.search(".*class=([^ ]*)>", l)
-                label = m.group(1)
-                label_list.append(label)
-            elif l[:5] == "</doc":
-                doc_list.append(doc)
-                doc = ""
-            else:
-                doc += l + ' '
-
-    # encode
-    X = vectorizer.fit_transform(doc_list)
-    X = csr_matrix(X)
-    X = X.multiply(logprobs)
-
-    return X, label_list
-
-
 def projection_vectorized(projection_mat, projection_functions):
     KC_size = len(projection_functions)
     PN_size = projection_mat.shape[1]
