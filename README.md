@@ -1,6 +1,6 @@
 # PeARS Fruit Fly
 
-This repository integrates insights from the Fruit Fly Algorithm (FFA) in the PeARS framework. Browse the *references.txt* file for references to relevant scientific publications. There is also a little practical exercise on using the FFA [here](https://github.com/ml-for-nlp/fruit-fly).
+This repository integrates insights from the Fruit Fly Algorithm (FFA) in the PeARS framework. Browse the wiki for references to relevant scientific publications. There is also a little practical exercise on using the FFA [here](https://github.com/ml-for-nlp/fruit-fly).
 
 ## Install
 
@@ -14,15 +14,19 @@ Install requirements:
     source bin activate
     pip install -r requirements.txt
 
-## Dataset
+## Repository structure
+
+This repository contains three directories, as described below.
+
+### Dataset
 
 See README in the dataset/ directory for details of the dataset to be downloaded.
 
-## CommonCrawl processor
+### CommonCrawl processor
 
-Codes for cleaning the CommonCrawl downloads, and clustering. Please read the README in the sub folder.
+Code for cleaning the CommonCrawl downloads, and clustering. Please read the README in the sub folder.
 
-## Fruit-fly algorithm
+### Fruit-fly algorithm
 
 Implementation of the FFA for text classification.
 

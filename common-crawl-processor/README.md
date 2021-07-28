@@ -29,3 +29,29 @@ You should see the file being processed:
     385 documents processed 100 documents added...
     387 documents processed 100 documents added...
     768 documents processed 200 documents added...
+    
+We are going to use the [OCTIS library](https://github.com/MIND-Lab/OCTIS) to remove unwanted content. First, we need to transform the .xml files into .txt.
+
+     python3 transform_into_txt.py --foldertxt=processed_wet
+     
+We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. 
+
+     python3 preprocess_octis.py --foldertxt=processed_wet --ndocs=70000 --pathdataset=octis
+     
+Then, we are ready to train the LDA model. As explained in the documentation of OCTIS, the output is a dictionary with:
+* topics: the list of the most significative words for each topic (list of lists of strings).
+* topic-word-matrix: an NxV matrix of weights where N is the number of topics and V is the vocabulary length.
+* topic-document-matrix: an NxD matrix of weights where N is the number of topics and D is the number of documents in the corpus.
+
+The code below saves this dictionary into a .npz file. In order to train the LDA model, run:
+
+     python3 lda_octis.py --pathdataset=octis --outputfile=lda_model
+     
+Now we can have a look at the top k topics that have been assigned for our web documents. We can focus on one word in particular to see how well the model assigns topics to the documents. 
+
+     python3 topk_octis.py --pathdataset=test --foldertxt=processed_wet --topk=3 --lda_model=lda_model --word=computer
+
+
+
+     
+
