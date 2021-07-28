@@ -25,14 +25,13 @@ import pathlib
 from timer import Timer
 from docopt import docopt
 import sentencepiece as spm
-from itertools import combinations
-from scipy.sparse import coo_matrix
-from collections import defaultdict, Counter
+from scipy.sparse import coo_matrix, csr_matrix, vstack
 from sklearn.feature_extraction.text import CountVectorizer
 
 # makes segmenter instance and loads the model file (m.model)
 sp = spm.SentencePieceProcessor()
 sp.load('../spmcc.model')
+
 
 def read_vocab():
     c = 0
@@ -72,7 +71,7 @@ def read_projections(d):
     return projections, pn_to_kc
 
 
-def show_projections(hashed_kenyon,reverse_vocab):
+def show_projections(hashed_kenyon, reverse_vocab):
     important_words = {}
     for i in range(len(hashed_kenyon)):
         if hashed_kenyon[i] == 1:
@@ -87,6 +86,95 @@ def show_projections(hashed_kenyon,reverse_vocab):
     print("BEST PNS", sorted(important_words, key=important_words.get, reverse=True)[:proj_size])
 
 
+def read_n_encode_dataset(path):
+    # read
+    doc_list, label_list = [], []
+    doc = ""
+    with open(path) as f:
+        for l in f:
+            l = l.rstrip('\n')
+            if l[:4] == "<doc":
+                m = re.search(".*class=([^ ]*)>", l)
+                label = m.group(1)
+                label_list.append(label)
+            elif l[:5] == "</doc":
+                doc_list.append(doc)
+                doc = ""
+            else:
+                doc += l + ' '
+
+    # encode
+    X = vectorizer.fit_transform(doc_list)
+    X = csr_matrix(X)
+    X = X.multiply(logprobs)
+
+    return X, label_list
+
+
+def projection_vectorized(projection_mat, projection_functions):
+    KC_size = len(projection_functions)
+    PN_size = projection_mat.shape[1]
+    weight_mat = np.zeros((KC_size, PN_size))
+    for kc_idx, pn_list in projection_functions.items():
+        weight_mat[kc_idx][pn_list] = 1
+    weight_mat = coo_matrix(weight_mat.T)
+    return projection_mat.dot(weight_mat)
+
+
+def wta_vectorized(feature_mat, k, percent=True):
+    # thanks https://stackoverflow.com/a/59405060
+
+    m, n = feature_mat.shape
+    if percent:
+        k = int(k * n / 100)
+    # get (unsorted) indices of top-k values
+    topk_indices = np.argpartition(feature_mat, -k, axis=1)[:, -k:]
+    # get k-th value
+    rows, _ = np.indices((m, k))
+    kth_vals = feature_mat[rows, topk_indices].min(axis=1)
+    # get boolean mask of values smaller than k-th
+    is_smaller_than_kth = feature_mat < kth_vals[:, None]
+    # replace mask by 0
+    feature_mat[is_smaller_than_kth] = 0
+    return feature_mat
+
+
+def hash_input_vectorized(projection_mat, percent_hash, projection_functions):
+    kc_mat = projection_vectorized(projection_mat, projection_functions)
+    m, n = kc_mat.shape
+    wta_csr = csr_matrix(np.zeros(n))
+    for i in range(0, m, 2000):
+        part = wta_vectorized(kc_mat[i: i+2000].toarray(), k=percent_hash)
+        wta_csr = vstack([wta_csr, csr_matrix(part, shape=part.shape)])
+    hashed_kenyon = wta_csr[1:]
+    return hashed_kenyon
+
+
+def hash_dataset(dataset_mat, projection_path, percent_hash, top_words):
+    # read projection file
+    projection_functions, pn_to_kc = read_projections(projection_path)
+
+    # hash
+    m, n = dataset_mat.shape
+    dataset_mat = csr_matrix(dataset_mat)
+    wta_csr = csr_matrix(np.zeros(n))
+    for i in range(0, m, 2000):
+        part = wta_vectorized(dataset_mat[i: i+2000].toarray(), k=top_words, percent=False)
+        wta_csr = vstack([wta_csr, csr_matrix(part, shape=part.shape)])
+    hs = hash_input_vectorized(wta_csr[1:], percent_hash, projection_functions)
+
+    return hs
+
+
+def return_keywords(vec):
+    keywords = []
+    vs = np.argsort(vec)
+    for i in vs[-10:]:
+        keywords.append(i)
+    return keywords
+
+
+###################################### old version ################################
 def projection(projection_layer, KC_size, pn_to_kc, projection_functions):
     kenyon_layer = np.zeros(KC_size)
     nzs = np.where(projection_layer > 0)
@@ -105,9 +193,10 @@ def projection(projection_layer, KC_size, pn_to_kc, projection_functions):
     return kenyon_layer
 
 
-def wta(layer,percent):
+def wta(layer, top, percent=True):
     activations = np.zeros(len(layer))
-    top = int(percent * len(layer) / 100)
+    if percent:
+        top = int(top * len(layer) / 100)
     activated_cs = np.argpartition(layer, -top)[-top:]
     for cell in activated_cs:
         activations[cell] = layer[cell]
@@ -116,17 +205,9 @@ def wta(layer,percent):
 
 def hash_input(vec, reverse_vocab, percent_hash, KC_size, pn_to_kc, projection_functions):
     kenyon_layer = projection(vec, KC_size, pn_to_kc, projection_functions)
-    hashed_kenyon = wta(kenyon_layer,percent_hash)
+    hashed_kenyon = wta(kenyon_layer, percent_hash)
     #show_projections(hashed_kenyon,reverse_vocab)
     return hashed_kenyon
-
-
-def return_keywords(vec):
-    keywords = []
-    vs = np.argsort(vec)
-    for i in vs[-10:]:
-        keywords.append(i)
-    return keywords
 
 
 if __name__ == '__main__':
@@ -175,7 +256,7 @@ if __name__ == '__main__':
 
 
     with open(in_file_path,'r') as f:
-        for l in f:        
+        for l in f:
             l = l.rstrip('\n')
             if l[:4] == "<doc":
                 m = re.search(".*id=([^ ]*) ",l)
@@ -196,7 +277,7 @@ if __name__ == '__main__':
                 #t.stop()
                 X = X.toarray()[0]
                 vec = logprobs * X
-                vec = wta(vec,top_tokens)
+                vec = wta(vec, top_tokens, percent=False)
                 #print("Hashing...")
                 #t.start()
                 hs = hash_input(vec,reverse_vocab,percent_hash, KC_size, pn_to_kc, projection_functions)
