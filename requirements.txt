@@ -15,8 +15,8 @@ six==1.15.0
 sklearn==0.0
 threadpoolctl==2.1.0
 tldextract==3.1.0
-torch==1.8.1
 typing-extensions==3.7.4.3
 urllib3==1.26.3
 bayesian-optimization==1.2.0
 jupyter==1.0.0
+octis==1.8.3
