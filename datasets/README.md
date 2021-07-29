@@ -8,7 +8,7 @@ procedures to create the ready-to-train datasets, including:
 * Tokenize and split the Wikipedia dataset, 20newsgroups dataset, and Web of Science dataset.
 
 ## The Wikipedia dataset
-Please download the directory **wikipedia** in this Google Drive:
+Please download the directory **wikipedia** from this URL:
 
 https://drive.google.com/drive/folders/1R_BBCdLH7FRdyD071GRteigY6ZztUN5z?usp=sharing
 
