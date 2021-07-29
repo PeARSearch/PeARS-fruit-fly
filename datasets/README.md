@@ -10,7 +10,7 @@ procedures to create the ready-to-train datasets, including:
 ## The Wikipedia dataset
 Please download the directory **wikipedia** from this URL:
 
-https://drive.google.com/drive/folders/1R_BBCdLH7FRdyD071GRteigY6ZztUN5z?usp=sharing
+[http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip)
 
 and place it in this **datasets** directory. If you need the un-tokenized version, please download [the raw dataset](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia-raw.zip).
 
