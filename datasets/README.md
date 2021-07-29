@@ -14,7 +14,7 @@ https://drive.google.com/drive/folders/1R_BBCdLH7FRdyD071GRteigY6ZztUN5z?usp=sha
 
 and place it in this **datasets** directory. If you need the un-tokenized version, please download **wiki_dataset_raw**.
 
-You may follow the first section of the **prepare_datasets** notebook to understand the procedure that create the dataset.
+You may follow the first section of the **prepare_datasets** notebook to understand the procedure that creates the dataset.
 
 ## The 20newsgroups dataset
 
