@@ -1,5 +1,27 @@
-### The dataset directory
+# The dataset directory
 
-This directory contains the datasets to be processed by the fruit fly. Please unpack:
+This directory contains the datasets to be processed by the fruit fly. The **prepare_datasets** notebook contains the
+procedures to create the ready-to-train datasets, including:
 
-* the 20_newsgroup dataset, available from http://qwone.com/~jason/20Newsgroups/20news-bydate.tar.gz.
+* Select the classes and download articles from Wikipedia.
+
+* Tokenize and split the Wikipedia dataset, 20newsgroups dataset, and Web of Science dataset.
+
+## The Wikipedia dataset
+Please download the directory **wikipedia** from this URL:
+
+[http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip)
+
+and place it in this **datasets** directory. If you need the un-tokenized version, please download [the raw dataset](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia-raw.zip).
+
+You may follow the first section of the **prepare_datasets** notebook to understand the procedure that creates the dataset.
+
+## The 20newsgroups dataset
+
+Please follow the instructions in the second section of the **prepare_datasets** notebook to create the ready-to-train
+version of the dataset.
+
+## The Web of Science dataset
+
+Please follow the instructions in the third section of the **prepare_datasets** notebook to create the ready-to-train
+version of the dataset.

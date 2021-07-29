@@ -22,7 +22,7 @@ import sentencepiece as spm
 
 # makes segmenter instance and loads the model file (m.model)
 sp = spm.SentencePieceProcessor()
-sp.load('spmcc.model')
+sp.load('../spmcc.model')
 
 
 def read_vocab():
@@ -30,7 +30,7 @@ def read_vocab():
     vocab = {}
     reverse_vocab = {}
     logprobs = []
-    with open("spmcc.vocab") as f:
+    with open("../spmcc.vocab") as f:
         for l in f:
             l = l.rstrip('\n')
             wp = l.split('\t')[0]
@@ -47,11 +47,11 @@ def read_vocab():
 
 def output_wordpieces(train=True):
     if train:
-        out_file = open("./datasets/20news-bydate/20news-bydate-train.sp", 'w')
-        base_dir = "./datasets/20news-bydate/20news-bydate-train"
+        out_file = open("./20news-bydate/20news-bydate-train.sp", 'w')
+        base_dir = "./20news-bydate/20news-bydate-train"
     else:
-        out_file = open("./datasets/20news-bydate/20news-bydate-test.sp", 'w')
-        base_dir = "./datasets/20news-bydate/20news-bydate-test"
+        out_file = open("./20news-bydate/20news-bydate-test.sp", 'w')
+        base_dir = "./20news-bydate/20news-bydate-test"
 
     # get folders in 20_newsgroup corpus
     folders = os.listdir(base_dir)
