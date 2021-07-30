@@ -3,18 +3,16 @@ It's a pipeline to deal with web documents from Common Crawl. It selects documen
 
 ### Getting raw text out of Common Crawl dumps
 
-We will be using the .wet files from Common Crawl. For more information on the WET format, please consult [...].
+We will be using the .wet files from Common Crawl. For more information on the WET format, please consult [https://skeptric.com/text-meta-data-commoncrawl/](https://skeptric.com/text-meta-data-commoncrawl/}.
 
-Note that processing Common Crawl files is a very intensive job. Please refer to the information we have compiled about benchmarking (here in the wiki) before launching your own jobs. At the same time, don't be shy: you can process small amounts of data on your laptop without problems. So give it a go, and find friends to collectively process *more* data!
+Note that processing Common Crawl files is a very intensive job. At the same time, don't be shy: you can process small amounts of data on your laptop without problems. So give it a go, and find friends to collectively process *more* data!
 
 Before you start, you will have to find the location of some .wet files to process. If you go to the Common Crawl website and look for monthly file listings, for instance [here](https://commoncrawl.s3.amazonaws.com/crawl-data/CC-MAIN-2020-50/index.html), you will find files named *wet.paths.gz*. If you uncompress one of those *wet.paths* file, you will get a list of URLs starting with *crawl-data...* Prepend *https://commoncrawl.s3.amazonaws.com/* to each line, and you will get a few tens of thousands of .wet files' URLs.
 
+For the sake of example, there is one such .wet URL in *example-path-file.txt*, in this directory.
 
 ## Using the code
 
-We recommend using a virtual environment. You can set it up from outside your clone repository, by doing:
-
-     virtualenv common-crawl-processor
 
 To process raw .wet files, do:
 
@@ -32,7 +30,7 @@ You should see the file being processed:
     
 We are going to use the [OCTIS library](https://github.com/MIND-Lab/OCTIS) to remove unwanted content. First, we need to transform the .xml files into .txt.
 
-     python3 transform_into_txt.py --foldertxt=processed_wet
+     python3 transform_into_txt.py --folder=processed_wet
      
 We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. 
 
@@ -47,9 +45,9 @@ The code below saves this dictionary into a .npz file. In order to train the LDA
 
      python3 lda_octis.py --pathdataset=octis --outputfile=lda_model
      
-Now we can have a look at the top k topics that have been assigned for our web documents. We can focus on one word in particular to see how well the model assigns topics to the documents. 
+Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection:
 
-     python3 topk_octis.py --pathdataset=test --foldertxt=processed_wet --topk=3 --lda_model=lda_model --word=computer
+     python3 topk_octis.py --pathdataset=octis --foldertxt=processed_wet --topk=3 --lda_model=lda_model --word=var
 
 
 

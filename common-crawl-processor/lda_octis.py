@@ -35,8 +35,8 @@ def train_lda(dataset, out_file):
 
 	np.savez(out_file, **model_output)
 	print(f"Output (a dictionary of array) was saved as '{out_file}'.")
-	toc = time.time()
-	print(f"It has taken {(toc-tic)/60} minutes to train the LDA model.")
+	#toc = time.time()
+	#print(f"It has taken {(toc-tic)/60} minutes to train the LDA model.")
 
 
 if __name__ == '__main__':
