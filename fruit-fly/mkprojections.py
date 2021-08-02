@@ -39,7 +39,7 @@ def read_vocab():
 
 
 def create_projections(PN_size, KC_size, proj_size,d, trial):
-    print("Creating",KC_size,"projections...")
+    # print("Creating",KC_size,"projections...")
     projection_functions = {}
     idx = list(range(PN_size))
     potential_projections = []
