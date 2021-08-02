@@ -68,32 +68,52 @@ def read_n_encode_dataset(path):
 
 
 def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
-                      C, num_iter, max_val_score):
-    model_file = generate_projs(KC_size, proj_size)
+                      C, num_iter, num_trial):
+    def _hash_n_train(model_file):
+        # print('hashing dataset')
+        hash_train = hash_dataset(dataset_mat=train_set, projection_path=model_file,
+                                  percent_hash=percent_hash, top_words=top_word)
+        hash_val = hash_dataset(dataset_mat=val_set, projection_path=model_file,
+                                percent_hash=percent_hash, top_words=top_word)
+        # print('training and evaluating')
+        val_score, model = train_model(m_train=hash_train, classes_train=train_label,
+                                       m_val=hash_val, classes_val=val_label,
+                                       C=C, num_iter=num_iter)
+        return val_score, model
 
-    print('hashing dataset')
-    hash_train = hash_dataset(dataset_mat=train_set, projection_path=model_file,
-                              percent_hash=percent_hash, top_words=top_word)
-    hash_val = hash_dataset(dataset_mat=val_set, projection_path=model_file,
-                            percent_hash=percent_hash, top_words=top_word)
+    print('creating projections')
+    model_files = [generate_projs(KC_size, proj_size) for _ in range(num_trial)]
+    print('training')
+    score_model_list = joblib.Parallel(n_jobs=num_trial, prefer="threads")(
+                           joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
+    score_list = [i[0] for i in score_model_list]
+    model_list = [i[1] for i in score_model_list]
 
-    print('training and evaluating')
-    val_score, model = train_model(m_train=hash_train, classes_train=train_label,
-                                      m_val=hash_val, classes_val=val_label,
-                                      C=C, num_iter=num_iter)
-    trial = model_file.split('.')[0].split('_')[1]
+    # select the max performance
+    max_idx = np.argmax(score_list)
+    trial = model_files[max_idx].split('.')[0].split('_')[1]
     save_name = 'kc' + str(KC_size) + '_proj' + str(proj_size) + '_trial' + str(trial) +\
                 '_top' + str(top_word) + '_wta' + str(percent_hash) + '_C' + str(C) + \
-                '_iter' + str(num_iter) + '_score' + str(val_score)[2:]  # remove 0.
-    if max_val_score:
-        if val_score > max_val_score['target']:
-            for f in pathlib.Path(f'./models/classification/{dataset_name}_{now}').glob('*.sav'):
-                f.unlink()
-            joblib.dump(model, f'./models/classification/{dataset_name}_{now}/{save_name}.sav')
-    else:  # the first run does not return the max score
-        joblib.dump(model, f'./models/classification/{dataset_name}_{now}/{save_name}.sav')
+                '_iter' + str(num_iter) + '_score' + str(score_list[max_idx])[2:]  # remove 0.
+    global max_val_score
+    if score_list[max_idx] > max_val_score:
+        max_val_score = score_list[max_idx]
+        for f in pathlib.Path(f'./models/classification/{dataset_name}_{now}').glob('*.sav'):
+            f.unlink()
+        joblib.dump(model_list[max_idx], f'./models/classification/{dataset_name}_{now}/{save_name}.sav')
 
-    return val_score
+    # average the validation acc
+    avg_score = np.mean(score_list)
+    std_score = np.std(score_list)
+    print('average score:', avg_score)
+
+    # write the std
+    with open(f'./log/logs_{dataset_name}.tsv', 'a') as f:
+        f.writelines('\t'.join(str(i) for i in [KC_size, proj_size, top_word,
+                                                percent_hash, C, num_iter, avg_score, std_score]))
+        f.writelines('\n')
+
+    return avg_score
 
 
 def optimize_fruitfly(continue_log):
@@ -103,9 +123,14 @@ def optimize_fruitfly(continue_log):
         proj_size = round(proj_size)
         percent_hash = round(percent_hash)
         C = round(C)
-        num_iter = 1000
+        num_iter = 50
+        if dataset_name == '20news':
+            num_iter = 2000  # 50 wos wiki, 2000 20news
+        num_proj = 5
+        print(f'--- KC_size {KC_size}, proj_size {proj_size},'
+              f'top_word {topword}, wta {percent_hash}, C {C} ---')
         return fruitfly_pipeline(topword, KC_size, proj_size, percent_hash,
-                                 C, num_iter, optimizer.max)
+                                 C, num_iter, num_proj)
 
     optimizer = BayesianOptimization(
         f=_classify,
@@ -152,6 +177,7 @@ if __name__ == '__main__':
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
     train_set, train_label = read_n_encode_dataset(train_path)
     val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'))
+    max_val_score = -1
 
     # search
     optimize_fruitfly(continue_log)
