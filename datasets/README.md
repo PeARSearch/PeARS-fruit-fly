@@ -1,27 +1,19 @@
 # The dataset directory
 
-This directory contains the datasets to be processed by the fruit fly. The **prepare_datasets** notebook contains the
-procedures to create the ready-to-train datasets, including:
+This directory contains the datasets to be processed by the fruit fly. There are three datasets: Wikipedia, [Web
+of Science](https://data.mendeley.com/datasets/9rw3vkcfy4/6) (medium-size version), and [20newsgroups](http://qwone.com/~jason/20Newsgroups/).
 
-* Select the classes and download articles from Wikipedia.
+Simply run this command to download the three datasets, and pre-process them for training:
 
-* Tokenize and split the Wikipedia dataset, 20newsgroups dataset, and Web of Science dataset.
+    python prepare_datasets.py
 
-## The Wikipedia dataset
-Please download the directory **wikipedia** from this URL:
+It may take a few minutes to download and pre-process the datasets. After finishing, there will be three folders
+created in this **datasets** directory with respected to three datasets.
 
-[http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip)
+## How to create the Wikipedia dataset
 
-and place it in this **datasets** directory. If you need the un-tokenized version, please download [the raw dataset](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia-raw.zip).
+If you are curious about how the Wikipedia dataset was created, please take a look at the **create_Wiki_dataset.ipynb** notebook.
+It contains the procedures to create the ready-to-train Wikipedia dataset, which includes truncated articles from Wikipedia.
 
-You may follow the first section of the **prepare_datasets** notebook to understand the procedure that creates the dataset.
+If you need the un-tokenized version, please download [the raw dataset](http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia-raw.zip).
 
-## The 20newsgroups dataset
-
-Please follow the instructions in the second section of the **prepare_datasets** notebook to create the ready-to-train
-version of the dataset.
-
-## The Web of Science dataset
-
-Please follow the instructions in the third section of the **prepare_datasets** notebook to create the ready-to-train
-version of the dataset.

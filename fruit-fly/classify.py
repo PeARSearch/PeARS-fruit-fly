@@ -43,7 +43,7 @@ def train_model(m_train,classes_train,m_val,classes_val,C,num_iter):
     lm.fit(m_train, classes_train)
     score = lm.score(m_val,classes_val)
     # print(lm.predict(m_val))
-    print(score)
+    # print(score)
     return score, lm
 
 
@@ -76,4 +76,5 @@ if __name__ == '__main__':
     num_iter = int(args["--num_iter"])
 
     m_train,classes_train,m_val,classes_val,ids_train,ids_val = prepare_data(tr_file)
-    train_model(m_train,classes_train,m_val,classes_val,C,num_iter)
+    score, lm = train_model(m_train,classes_train,m_val,classes_val,C,num_iter)
+    print(score)
