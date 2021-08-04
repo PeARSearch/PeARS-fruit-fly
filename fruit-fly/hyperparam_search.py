@@ -16,6 +16,7 @@ import re
 # import torch
 import pathlib
 import joblib
+import multiprocessing
 import sentencepiece as spm
 import numpy as np
 from datetime import datetime
@@ -33,7 +34,7 @@ from bayes_opt.event import Events
 from bayes_opt.util import load_logs
 
 
-def generate_projs(KC_size, proj_size):
+def generate_projs(PN_size, KC_size, proj_size, dataset_name):
     d = "models/projection/"+dataset_name+"/kc"+str(KC_size)+"-p"+str(proj_size)
     if not os.path.isdir(d):
         os.mkdir(d)
@@ -42,7 +43,7 @@ def generate_projs(KC_size, proj_size):
     return model_file
 
 
-def read_n_encode_dataset(path):
+def read_n_encode_dataset(path, vectorizer, logprobs):
     # read
     doc_list, label_list = [], []
     doc = ""
@@ -68,7 +69,7 @@ def read_n_encode_dataset(path):
 
 
 def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
-                      C, num_iter, num_trial):
+                      C, num_iter):
     def _hash_n_train(model_file):
         # print('hashing dataset')
         hash_train = hash_dataset(dataset_mat=train_set, projection_path=model_file,
@@ -82,9 +83,9 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
         return val_score, model
 
     print('creating projections')
-    model_files = [generate_projs(KC_size, proj_size) for _ in range(num_trial)]
+    model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_threads)]
     print('training')
-    score_model_list = joblib.Parallel(n_jobs=num_trial, prefer="threads")(
+    score_model_list = joblib.Parallel(n_jobs=num_threads, prefer="threads")(
                            joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
     score_list = [i[0] for i in score_model_list]
     model_list = [i[1] for i in score_model_list]
@@ -126,11 +127,10 @@ def optimize_fruitfly(continue_log):
         num_iter = 50
         if dataset_name == '20news':
             num_iter = 2000  # 50 wos wiki, 2000 20news
-        num_proj = 5
         print(f'--- KC_size {KC_size}, proj_size {proj_size},'
               f'top_word {topword}, wta {percent_hash}, C {C} ---')
         return fruitfly_pipeline(topword, KC_size, proj_size, percent_hash,
-                                 C, num_iter, num_proj)
+                                 C, num_iter)
 
     optimizer = BayesianOptimization(
         f=_classify,
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     continue_log = args["--continue_log"]
     dataset_name = train_path.split('/')[2].split('-')[0]
     print('Dataset name:', dataset_name)
-    print('reading dataset')
+
     pathlib.Path('./log').mkdir(parents=True, exist_ok=True)
     main_log_path = f'./log/logs_{dataset_name}.json'
     pathlib.Path(main_log_path).touch(exist_ok=True)
@@ -175,9 +175,13 @@ if __name__ == '__main__':
     vocab, reverse_vocab, logprobs = read_vocab()
     PN_size = len(vocab)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
-    train_set, train_label = read_n_encode_dataset(train_path)
-    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'))
+    print('reading dataset')
+    train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs)
+    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs)
     max_val_score = -1
+    num_threads = 5
+    while num_threads > multiprocessing.cpu_count() - 1:
+        num_threads = num_threads // 2
 
     # search
     optimize_fruitfly(continue_log)
