@@ -3,7 +3,7 @@ It's a pipeline to deal with web documents from Common Crawl. It selects documen
 
 ### Getting raw text out of Common Crawl dumps
 
-We will be using the .wet files from Common Crawl. For more information on the WET format, please consult [https://skeptric.com/text-meta-data-commoncrawl/](https://skeptric.com/text-meta-data-commoncrawl/}.
+We will be using the .wet files from Common Crawl. For more information on the WET format, please consult [https://skeptric.com/text-meta-data-commoncrawl/](https://skeptric.com/text-meta-data-commoncrawl/).
 
 Note that processing Common Crawl files is a very intensive job. At the same time, don't be shy: you can process small amounts of data on your laptop without problems. So give it a go, and find friends to collectively process *more* data!
 
