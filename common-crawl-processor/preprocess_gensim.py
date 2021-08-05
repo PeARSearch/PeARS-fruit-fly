@@ -81,10 +81,7 @@ if __name__ == '__main__':
     n_docs = args['--ndocs']
     pathdataset=args['--pathdataset']
 
-    # get_n_docs(folder_txt, int(n_docs))
+    get_n_docs(folder_txt, int(n_docs))
     docs=list_docs(folder_txt)
     preprocess(docs, pathdataset)
-
-# folder = "/mnt/storage/clic/8tera/shareclic/CommonCrawl/preprocessed/docs_503/"
-# folder_txt=("/mnt/storage/clic/8tera/shareclic/CommonCrawl/txt_files/")
 
