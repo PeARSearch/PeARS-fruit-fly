@@ -45,3 +45,12 @@ Wikipedia dataset:
     python hyperparam_search.py --train_path=../datasets/wikipedia/wikipedia-train.sp
 
 The validation scores and the combinations of hyper-parameters are stored in the log folder.
+
+### Test the best hyper-parameters on test sets
+
+Manually creating the best hyper-parameter settings in **models/best_models**. Please take a look in this folder for
+examples. Run:
+
+    python test_models.py --test_path=../datasets/wos/wos11967-test.sp --config_path=./models/best_models/wos.json
+
+to get the average score on **--test_path** for all the hyper-parameter settings in **--config_path**.
