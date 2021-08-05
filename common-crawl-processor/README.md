@@ -28,26 +28,25 @@ You should see the file being processed:
     387 documents processed 100 documents added...
     768 documents processed 200 documents added...
     
-We are going to use the [OCTIS library](https://github.com/MIND-Lab/OCTIS) to remove unwanted content. First, we need to transform the .xml files into .txt.
+We are going to use a topic modelling approach to remove unwanted content. First, we need to transform the .xml files into .txt.
 
      python3 transform_into_txt.py --folder=processed_wet
      
-We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. 
+We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. 
 
-     python3 preprocess_octis.py --foldertxt=processed_wet --ndocs=70000 --pathdataset=octis
+     python3 preprocess_gensim.py --foldertxt=processed_wet --ndocs=70000 --pathdataset=gensim_data
      
-Then, we are ready to train the LDA model. As explained in the documentation of OCTIS, the output is a dictionary with:
-* topics: the list of the most significative words for each topic (list of lists of strings).
-* topic-word-matrix: an NxV matrix of weights where N is the number of topics and V is the vocabulary length.
-* topic-document-matrix: an NxD matrix of weights where N is the number of topics and D is the number of documents in the corpus.
+Then we train our LDA model. To do that, run:
 
-The code below saves this dictionary into a .npz file. In order to train the LDA model, run:
-
-     python3 lda_octis.py --pathdataset=octis --outputfile=lda_model
+     python3 train_lda.py --pathdataset=gensim_data --outputfile=model_lda
      
 Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection:
 
-     python3 topk_octis.py --pathdataset=octis --foldertxt=processed_wet --topk=3 --lda_model=lda_model --word=var
+     python3 topk_lda.py --foldertxt=processed_wet --pathdataset=gensim_data --topk=3 --word=var
+
+After observing the list of topics returned from our LDA model and their probability of correlation with a sample of documents. We pick some topics of relevance for our filtering step as well as a threshold, that is, documents that have a probability higher than the threshold in the chosen topics are removed from our corpus. You can see the documents that would have been discarded and kept by running the following:
+
+    python3 
 
 
 
