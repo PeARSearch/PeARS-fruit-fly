@@ -44,7 +44,7 @@ Now we can have a look at the top k topics that have been assigned for our web d
 
      python3 topk_lda.py --foldertxt=processed_wet --pathdataset=gensim_data --topk=3 --word=var
 
-After observing the list of topics returned from our LDA model and their probability of correlation with a sample of documents. We pick some topics of relevance for our filtering step as well as a threshold, that is, documents that have a probability higher than the threshold in the chosen topics are removed from our corpus. You can see the documents that would have been discarded and kept by running the following:
+Then, we annotate a sample with 500 documents in order to pick some topics of relevance for our filtering step as well as a threshold, i.e., documents that have a probability higher than the threshold in the chosen topics are removed from our corpus. You can see the documents that would have been discarded and kept in your own CommonCrawl corpus by running the following:
 
     python3 
 
