@@ -25,7 +25,7 @@ from classify import train_model
 from hyperparam_search import read_n_encode_dataset, generate_projs
 
 
-def evaluate(top_word, KC_size, proj_size, percent_hash, C, num_iter):
+def evaluate(top_word, KC_size, proj_size, percent_hash, C, num_iter, num_trial):
     def _hash_n_train(model_file):
         # print('hashing dataset')
         hash_train = hash_dataset(dataset_mat=train_set, projection_path=model_file,
@@ -39,10 +39,17 @@ def evaluate(top_word, KC_size, proj_size, percent_hash, C, num_iter):
         return test_score
 
     print('creating projections')
-    model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_threads)]
+    model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_trial)]
     print('training')
-    score_list = joblib.Parallel(n_jobs=num_threads, prefer="threads")(
-        joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
+    job_list = [max_thread] * (num_trial // max_thread) + [num_trial % max_thread]
+    job_list = [i for i in job_list if i != 0]
+    score_list = []
+    pointer = 0
+    for num_job in job_list:
+        score_model_list = joblib.Parallel(n_jobs=num_job, prefer="threads")(
+            joblib.delayed(_hash_n_train)(model_file) for model_file in model_files[pointer:pointer+num_job])
+        score_list += [i[0] for i in score_model_list]
+        pointer += num_job
 
     avg_score = np.mean(score_list)
     print('average score:', avg_score)
@@ -66,9 +73,8 @@ if __name__ == '__main__':
     print('reading dataset')
     test_set, test_label = read_n_encode_dataset(test_path, vectorizer, logprobs)
     train_set, train_label = read_n_encode_dataset(test_path.replace('test', 'train'), vectorizer, logprobs)
-    num_threads = 5
-    while num_threads > multiprocessing.cpu_count() - 1:
-        num_threads = num_threads // 2
+    max_thread = multiprocessing.cpu_count() - 1
+    num_trial = 5
     num_iter = 50
     if dataset_name == '20news':
         num_iter = 2000
@@ -84,7 +90,7 @@ if __name__ == '__main__':
     for config in config_list:
         score = evaluate(top_word=config['topword'], KC_size=config['KC_size'],
                          proj_size=config['proj_size'], percent_hash=config['percent_hash'],
-                         C=config['C'], num_iter=num_iter)
+                         C=config['C'], num_iter=num_iter, num_trial=num_trial)
         test_score_list.append(score)
 
     # print average scores

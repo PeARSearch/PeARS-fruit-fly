@@ -69,7 +69,7 @@ def read_n_encode_dataset(path, vectorizer, logprobs):
 
 
 def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
-                      C, num_iter):
+                      C, num_iter, num_trial):
     def _hash_n_train(model_file):
         # print('hashing dataset')
         hash_train = hash_dataset(dataset_mat=train_set, projection_path=model_file,
@@ -83,12 +83,25 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
         return val_score, model
 
     print('creating projections')
-    model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_threads)]
+    model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_trial)]
+
     print('training')
-    score_model_list = joblib.Parallel(n_jobs=num_threads, prefer="threads")(
-                           joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
-    score_list = [i[0] for i in score_model_list]
-    model_list = [i[1] for i in score_model_list]
+    # plan how many threads should run at the same time
+    # this will be essential in case of limited hardware resource
+    # e.g. num_trial = 5, max_thread = 1 -> job_list = [1, 1, 1, 1, 1]
+    # num_trial = 5, max_thread = 3 -> job_list = [3, 2]
+    # num_trial = 5, max_thread = 100 -> job_list = [5]
+    job_list = [max_thread] * (num_trial // max_thread) + [num_trial % max_thread]
+    job_list = [i for i in job_list if i != 0]
+
+    score_list, model_list = [], []
+    pointer = 0
+    for num_job in job_list:
+        score_model_list = joblib.Parallel(n_jobs=num_job, prefer="threads")(
+            joblib.delayed(_hash_n_train)(model_file) for model_file in model_files[pointer:pointer+num_job])
+        score_list += [i[0] for i in score_model_list]
+        model_list += [i[1] for i in score_model_list]
+        pointer += num_job
 
     # select the max performance
     max_idx = np.argmax(score_list)
@@ -124,13 +137,14 @@ def optimize_fruitfly(continue_log):
         proj_size = round(proj_size)
         percent_hash = round(percent_hash)
         C = round(C)
+        num_trial = 5
         num_iter = 50
         if dataset_name == '20news':
             num_iter = 2000  # 50 wos wiki, 2000 20news
-        print(f'--- KC_size {KC_size}, proj_size {proj_size},'
+        print(f'--- KC_size {KC_size}, proj_size {proj_size}, '
               f'top_word {topword}, wta {percent_hash}, C {C} ---')
         return fruitfly_pipeline(topword, KC_size, proj_size, percent_hash,
-                                 C, num_iter)
+                                 C, num_iter, num_trial)
 
     optimizer = BayesianOptimization(
         f=_classify,
@@ -179,9 +193,7 @@ if __name__ == '__main__':
     train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs)
     val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs)
     max_val_score = -1
-    num_threads = 5
-    while num_threads > multiprocessing.cpu_count() - 1:
-        num_threads = num_threads // 2
+    max_thread = multiprocessing.cpu_count() - 1
 
     # search
     optimize_fruitfly(continue_log)
