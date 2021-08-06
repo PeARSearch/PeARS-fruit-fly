@@ -47,14 +47,14 @@ def load_everything(pathdataset, pathmodel):
 
 def filtering(folder, pathmodel, pathdataset):
 	dictionary, lda, tokenizer, topics=load_everything(pathdataset, pathmodel)
-	json_f = 'docs_0.json'  #folder+
+	json_f = folder+'docs_0.json'  #
 	n_doc=0
 	n_kept=0
 	f_globs= glob.glob(folder+"*.gz")
 	for f in f_globs:
 		print(f)
 		with gzip.open(f, 'rb') as f_in:
-			unzipped_f = f.replace(".gz", "").split("/")[-1] #f.replace(".gz", "") 
+			unzipped_f = f.replace(".gz", "") 
 			with open(unzipped_f, 'wb') as f_out:
 				shutil.copyfileobj(f_in, f_out)
 
@@ -97,8 +97,8 @@ def filtering(folder, pathmodel, pathdataset):
 if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
 
-  folder = ""+args['--folder']+""
+  folder = "./"+args['--folder']+"/"
   pathmodel=args['--pathmodel']
-  pathdataset=""+args['--pathdataset']+"/"
+  pathdataset="./"+args['--pathdataset']+"/"
 
   filtering(folder, pathmodel, pathdataset)
