@@ -1,7 +1,7 @@
 """Common Crawl processor - pre-processing of a number of texts to be fed into the topic model (LDA) of the OCTIS library. 
 
 Usage:
-  preprocess_gensim.py --foldertxt=<foldername> --ndocs=<numberofwebdocs> --pathdataset=<foldername> 
+  preprocess_gensim.py --folder=<foldername> --ndocs=<numberofwebdocs> --pathdataset=<foldername> 
   preprocess_gensim.py (-h | --help)
   preprocess_gensim.py --version
 
@@ -9,7 +9,7 @@ Usage:
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --foldertxt=<foldername>     Name of the folder where the zipped .xml files are located
+  --folder=<foldername>     Name of the folder where the zipped .xml files are located
   --ndocs=<numberofdocs>         Number of documents to be preprocessed for training the topic model
   --pathdataset=<foldername>       Folder where the pre-processed dataset will be placed
 
@@ -77,7 +77,7 @@ def preprocess(docs, pathdataset):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = args['--foldertxt']
+    folder_txt = args['--folder']
     n_docs = args['--ndocs']
     pathdataset=args['--pathdataset']
 
