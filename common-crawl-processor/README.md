@@ -40,7 +40,7 @@ Then we train our LDA model. To do that, run:
 
      python3 train_lda.py --pathdataset=gensim_data --outputfile=model_lda
      
-Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection:
+Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection. You can see the results of your word search in the file named 'topkprob_word.csv' after running the code below: 
 
      python3 topk_lda.py --folder=processed_wet --pathdataset=gensim_data --pathmodel=model_lda --topk=3 --word=var
 
