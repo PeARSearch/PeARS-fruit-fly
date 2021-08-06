@@ -46,8 +46,8 @@ def train_lda(outputfile, pathdataset):
 	    corpus=corpus,
 	    id2word=id2word,
 	    chunksize=chunksize,
-        alpha='auto', 
-        eta='auto',
+	    alpha='auto',
+	    eta='auto',
 	    iterations=iterations,
 	    num_topics=num_topics,
 	    passes=passes,
@@ -58,7 +58,7 @@ def train_lda(outputfile, pathdataset):
 	temp_file = datapath(outputfile)
 	lda.save(temp_file)
 		
-	txt = open(f'./{pathdataset}/100topics_lda.txt', 'w')
+	txt = open(f'./{pathdataset}/topics_lda.txt', 'w')
 	topics = lda.show_topics(num_topics=num_topics, num_words=10, log=False, formatted=False)
 	for top in topics:
 		txt.write(", ".join([t[0] for t in top[1]])+"\t"+str(top[0])+'\n')
