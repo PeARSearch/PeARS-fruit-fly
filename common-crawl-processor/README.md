@@ -42,7 +42,7 @@ Then we train our LDA model. To do that, run:
      
 Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection:
 
-     python3 topk_lda.py --foldertxt=processed_wet --pathdataset=gensim_data --topk=3 --word=var
+     python3 topk_lda.py --foldertxt=processed_wet --pathdataset=gensim_data --pathmodel=model_lda --topk=3 --word=var
 
 Then, we annotate a sample with 500 documents in order to pick some topics of relevance for our filtering step as well as a threshold, i.e., documents that have a probability higher than the threshold in the chosen topics are removed from our corpus. You can see the documents that would have been discarded and kept in your own CommonCrawl corpus by running the following:
 
