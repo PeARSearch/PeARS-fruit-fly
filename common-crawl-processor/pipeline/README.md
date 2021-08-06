@@ -1,6 +1,6 @@
 ## Common-crawl-processor pipeline
 
-If we are processing billions of documents, we need to save some space by avoiding saving documents over and over again. The purpose of this pipeline is to remove innapropriate content before saving our relevant corpus. 
+If we are processing billions of documents, we need to save some space by avoiding saving documents over and over again. The purpose of this pipeline is to remove innapropriate content and only save the relevant documents in our corpus. 
 
 ### Executing the pipeline
 
