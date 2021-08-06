@@ -10,5 +10,5 @@ This step requires some manual work because you will need to choose the threshol
 
     python3 filter_documents.py --folder=processed_wet --pathmodel=model_lda --pathdataset=gensim_lda
     
-You can process as many documents as you like until you reach a corpus size that suits you, just hit Ctrl+C when you want to stop the code. 
+You can process as many documents as you like (or as many locations as you have) until you reach a corpus size that suits you, just hit Ctrl+C when you want to stop the code. 
     
