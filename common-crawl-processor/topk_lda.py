@@ -9,7 +9,7 @@ Usage:
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --folder=<foldername>         Name of the folder where the .txt files are located
+  --folder=<foldername>     Name of the folder where the .txt files are located
   --pathdataset=<foldername>    Name of the folder where the preprocessed data is located  
   --pathmodel=<filename>        Name of the file that where the LDA model has been saved
   --topk=<highestktopics>       Number of topics with the highest topics associated with documents
@@ -24,6 +24,8 @@ import sys
 from gensim.test.utils import datapath
 from gensim.corpora import Dictionary
 from gensim.models import LdaModel
+from collections import defaultdict
+import pandas as pd
 from docopt import docopt
 csv.field_size_limit(sys.maxsize)
 
@@ -33,38 +35,43 @@ def load_model(filepath):
   return lda
 
 def getktopics_prob(lda, word, k, corpus, idx_topics, docs):
-
+  dic={}
   for i, doc in enumerate(docs):
-      tops_text=lda.get_document_topics(corpus[i], minimum_probability=0)
-      tops_text = sorted(tops_text, key=lambda x:x[1], reverse=True)
-      for tup in tops_text[:k]:
-        if word in idx_topics[tup[0]]:
-            print(doc)
-            print("Index topic:", tup[0])
-            print('Probability of correlation between doc and topic', tup[1])
+    tops_text=lda.get_document_topics(corpus[i], minimum_probability=0)
+    tops_text = sorted(tops_text, key=lambda x:x[1], reverse=True)
+    for tup in tops_text[:k]:
+      if word in idx_topics[tup[0]]:
+        dic[i]=defaultdict(list)
+        dic[i]['doc']=doc
+        dic[i]['probability'].append(tup[1])
+        dic[i]["index_topic"].append(tup[0])
+        dic[i]['topics'].append(idx_topics[tup[0]])
+
+  df=pd.DataFrame.from_dict(dic, orient='index')
+  df.to_csv("topkprob_word.csv")
+  print(df)
+  return df
+  
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = args['--folder']
-    pathdataset = args['--pathdataset']
+    folder_txt = "../"+args['--folder']
+    pathdataset = "./"+args['--pathdataset']
     pathmodel=args['--pathmodel']
     k = int(args['--topk'])
     word = args['--word']
 
     docs=[]
-    txt_ori = open(folder_txt+"docs_octis.txt")
+    txt_ori = open(folder_txt+"/docs_octis.txt")
     for line in txt_ori.read().splitlines():
         docs.append(line)
 
     corpus=pickle.load(open(pathdataset+'/corpus_train.p', 'rb'))
     print(f"Original documents and corpus loaded...")
+    print()
 
-    txt_topics = open(f'./{pathdataset}/100topics_lda.txt', 'r')
-    idx_topics={}
-    for line in txt_topics.read().splitlines():
-        idx = line.split("\t")[-1]
-        idx_topics[idx]=line.split("\t")[0].split(" ")
+    idx_topics=pickle.load(open("dic_topics.pickle", 'rb'))
 
     lda = load_model(pathmodel)
     getktopics_prob(lda, word, k, corpus, idx_topics, docs)
