@@ -6,7 +6,7 @@ If we are processing billions of documents, we need to save some space by avoidi
 
 In order to run the pipeline, you will have needed to go through the steps presents in the common-crawl-processor folder so that all the necessary models and dictionaries are saved into your repository. 
 
-This step requires some manual work because you will need to choose the thresholds and the topics you want to exclude. You can replace our example in the topics_threshold.txt file and add your own according to your analysis. On the first columns there are the indexes of the topics returned from the model and on the second column the corresponding probability threshold. You can find the indexes of the topics from your model in the topics.txt file. The output of the code below is a .json file with a dictionary per line, each dictionary contains the keys 'doc', 'title', 'url' and 'lang' of each document kept in the preprocessing.  
+This step requires some manual work because you will need to choose the thresholds and the topics you want to exclude. You can replace our example in the topics_threshold.txt file and add your own according to your analysis. On the first columns there are the indexes of the topics returned from the model and on the second column the corresponding probability threshold. You can find the indexes and topics from your model in the topics_lda.txt file. The output of the code below is a .json file with a dictionary per line, each dictionary contains the keys 'doc', 'title', 'url' and 'lang' of each document kept in the preprocessing.  
 
 For that, run:
 
