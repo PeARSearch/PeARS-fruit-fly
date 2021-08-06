@@ -32,7 +32,7 @@ We are going to use a topic modelling approach to remove unwanted content. First
 
      python3 transform_into_txt.py --folder=processed_wet
      
-We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. 
+We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. The vocabulary for the LDA model has already been created and it's available in 'vocabulary.txt'. The code below calls this file for creating a bag of words for each document. 
 
      python3 preprocess_gensim.py --folder=processed_wet --ndocs=70000 --pathdataset=gensim_data
      
