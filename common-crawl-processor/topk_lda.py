@@ -1,7 +1,7 @@
 """Common Crawl processor - retrieve the top k topics with a specific keyword associated with the documents
 
 Usage:
-  topk_lda.py --foldertxt=<foldername> --pathdataset=<foldername> --pathmodel=<filename> --topk=<highestktopics> --word=<word>
+  topk_lda.py --folder=<foldername> --pathdataset=<foldername> --pathmodel=<filename> --topk=<highestktopics> --word=<word>
   topk_lda.py (-h | --help)
   topk_lda.py --version
 
@@ -9,7 +9,7 @@ Usage:
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --foldertxt=<foldername>     Name of the folder where the .txt files are located
+  --folder=<foldername>         Name of the folder where the .txt files are located
   --pathdataset=<foldername>    Name of the folder where the preprocessed data is located  
   --pathmodel=<filename>        Name of the file that where the LDA model has been saved
   --topk=<highestktopics>       Number of topics with the highest topics associated with documents
@@ -46,7 +46,7 @@ def getktopics_prob(lda, word, k, corpus, idx_topics, docs):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = args['--foldertxt']
+    folder_txt = args['--folder']
     pathdataset = args['--pathdataset']
     pathmodel=args['--pathmodel']
     k = int(args['--topk'])
