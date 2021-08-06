@@ -34,7 +34,7 @@ We are going to use a topic modelling approach to remove unwanted content. First
      
 We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. 
 
-     python3 preprocess_gensim.py --foldertxt=processed_wet --ndocs=70000 --pathdataset=gensim_data
+     python3 preprocess_gensim.py --folder=processed_wet --ndocs=70000 --pathdataset=gensim_data
      
 Then we train our LDA model. To do that, run:
 
@@ -42,7 +42,7 @@ Then we train our LDA model. To do that, run:
      
 Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection:
 
-     python3 topk_lda.py --foldertxt=processed_wet --pathdataset=gensim_data --pathmodel=model_lda --topk=3 --word=var
+     python3 topk_lda.py --folder=processed_wet --pathdataset=gensim_data --pathmodel=model_lda --topk=3 --word=var
 
 Then, we annotate a sample with 500 documents in order to pick some topics of relevance for our filtering step as well as a threshold, i.e., documents that have a probability higher than the threshold in the chosen topics are removed from our corpus. You can see the documents that would have been discarded and kept in your own CommonCrawl corpus by running the following:
 
