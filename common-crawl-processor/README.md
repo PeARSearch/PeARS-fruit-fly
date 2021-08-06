@@ -44,11 +44,7 @@ Now we can have a look at the top k topics that have been assigned for our web d
 
      python3 topk_lda.py --folder=processed_wet --pathdataset=gensim_data --pathmodel=model_lda --topk=3 --word=var
 
-Then, we annotate a sample with 500 documents in order to pick some topics of relevance for our filtering step as well as a threshold, i.e., documents that have a probability higher than the threshold in the chosen topics are removed from our corpus. You can see the documents that would have been discarded and kept in your own CommonCrawl corpus by running the following:
-
-    python3 
-
-
+Now you're ready to use the whole pipeline with your own topics to be discarded in the 'pipeline' repository. Have fun!
 
      
 
