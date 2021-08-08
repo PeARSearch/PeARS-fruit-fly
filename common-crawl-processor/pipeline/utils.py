@@ -17,9 +17,9 @@ def append_json_check_len(dic, filename):
     if os.path.getsize(filename) < 524288000:
       pass
     else:
-      split_ = filename.split("_")
-      n_f = int(split_[-1].replace(".json", ""))+1
-      filename = split_[0]+"_"+str(n_f)+".json"
+      split_ = filename.split("/")
+      n_f = int(split_[-1].split("_")[-1].replace(".json", ""))+1
+      filename = split_[-1].split("_")[0]+"_"+str(n_f)+".json"
       print(filename)
       output_file.close()
       output_file = open(filename, 'a', encoding='utf-8')
