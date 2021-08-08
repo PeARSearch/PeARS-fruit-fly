@@ -1,7 +1,7 @@
-"""Common Crawl processor - filter documents from innapropriate content and return .json files with clean documents at each line
+"""Common Crawl processor - filter documents from innapropriate content and return .json files with clean documents and their respective metadata at each line
 
 Usage:
-  filter_documents.py --folder=<foldername> --pathmodel=<pathname> --pathdataset=<foldername>
+  filter_documents.py --folder=<foldername> --pathmodel=<pathname> --pathdataset=<foldername> --keep_discarded=<boolean>
   filter_documents.py (-h | --help)
   filter_documents.py --version
 
@@ -11,6 +11,7 @@ Options:
   --folder=<foldername>     Only the name of the folder where the zipped .xml files are located
   --pathmodel =<pathname>		Where the LDA model has been saved
   --pathdataset=<foldername>	Where the information from LDA has been saved
+  --keep_discarded=<boolean>	True if you want to keep the documents discarded, otherwise False.
 
 """
 
@@ -44,17 +45,22 @@ def load_everything(pathdataset, pathmodel):
 		topics[int(t[0])]=float(t[-1])
 	return dictionary, lda, tokenizer, topics
 
-
-def filtering(folder, pathmodel, pathdataset):
+def filtering(folder, pathmodel, pathdataset, keep_discarded):
 	dictionary, lda, tokenizer, topics=load_everything(pathdataset, pathmodel)
-	json_f = folder+'docs_0.json'  #
+	j_keep = 'docs_0.json'
+	if keep_discarded == 'True':
+		j_disc= 'discard_0.json'
+	if os.path.isdir("corpus"):
+	    pass
+	else:
+	    os.makedirs("corpus")
 	n_doc=0
 	n_kept=0
 	f_globs= glob.glob(folder+"*.gz")
 	for f in f_globs:
 		print(f)
 		with gzip.open(f, 'rb') as f_in:
-			unzipped_f = f.replace(".gz", "") 
+			unzipped_f = folder+f.replace(".gz", "").split("/")[-1] #f.replace(".gz", "") 
 			with open(unzipped_f, 'wb') as f_out:
 				shutil.copyfileobj(f_in, f_out)
 
@@ -72,6 +78,7 @@ def filtering(folder, pathmodel, pathdataset):
 					continue
 				if line.startswith("</doc>"):
 					if doc != "" or doc != " ":
+						# if n_doc>62000:
 						label = LDAmodel.classify_removal(doc, dictionary, lda, tokenizer, topics)
 						if label != 1:
 							dic={}
@@ -79,8 +86,11 @@ def filtering(folder, pathmodel, pathdataset):
 							dic['lang']='en'
 							dic['title']=title
 							dic['url']=url
-							json_f=utils.append_json_check_len(dic, json_f)
+							j_keep=utils.append_json_check_len(dic, j_keep, "corpus/")
 							n_kept+=1
+						else:
+							if keep_discarded=='True':
+								j_disc=utils.append_json_check_len(dic, j_disc, "corpus/")
 						n_doc+=1
 						if n_doc%100==0:
 							print(f"{n_doc} documents checked and {n_kept} documents kept so far...")
@@ -98,7 +108,9 @@ if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
 
   folder = "./"+args['--folder']+"/"
+  print(folder)
   pathmodel=args['--pathmodel']
-  pathdataset="./"+args['--pathdataset']+"/"
+  pathdataset=""+args['--pathdataset']+"/"
+  keep_discarded=args['--keep_discarded']
 
-  filtering(folder, pathmodel, pathdataset)
+  filtering(folder, pathmodel, pathdataset, keep_discarded)
