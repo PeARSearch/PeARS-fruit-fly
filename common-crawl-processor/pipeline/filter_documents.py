@@ -47,9 +47,9 @@ def load_everything(pathdataset, pathmodel):
 
 def filtering(folder, pathmodel, pathdataset, keep_discarded):
 	dictionary, lda, tokenizer, topics=load_everything(pathdataset, pathmodel)
-	j_keep = 'docs_0.json'
+	j_keep = 'kept_0.json'
 	if keep_discarded == 'True':
-		j_disc= 'discard_0.json'
+		j_disc= 'discarded_0.json'
 	if os.path.isdir("corpus"):
 	    pass
 	else:
