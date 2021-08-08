@@ -78,7 +78,6 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 					continue
 				if line.startswith("</doc>"):
 					if doc != "" or doc != " ":
-						# if n_doc>62000:
 						label = LDAmodel.classify_removal(doc, dictionary, lda, tokenizer, topics)
 						if label != 1:
 							dic={}
