@@ -24,7 +24,8 @@ def append_json_check_len(dic, filename):
       filename = name+"_"+str(num+1)+".json"
       print(filename)
       output_file.close()
-      output_file = open(str(path).replace(f, "")+filename, 'a', encoding='utf-8')
+      new_filename=str(path).replace(f, "")+filename
+      output_file = open(new_filename, 'a', encoding='utf-8')
   json.dump(dic, output_file)
   output_file.write("\n")
-  return filename
+  return new_filename
