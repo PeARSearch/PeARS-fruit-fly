@@ -52,7 +52,7 @@ def load_idx_topics(pathdataset):
   txt = open(f'./{pathdataset}/topics_lda.txt', 'r')
   for top in txt.read().splitlines():
     top=top.split("\t")
-    idx_topics[int(top[1])]=top[0]
+    idx_topics[int(top[1])]=top[0].split(", ")
   txt.close()
   return idx_topics
 
