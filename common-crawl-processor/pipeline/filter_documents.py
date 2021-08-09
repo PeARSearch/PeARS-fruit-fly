@@ -109,7 +109,7 @@ if __name__ == '__main__':
   folder = "./"+args['--folder']+"/"
   print(folder)
   pathmodel=args['--pathmodel']
-  pathdataset=""+args['--pathdataset']+"/"
+  pathdataset="./"+args['--pathdataset']+"/"
   keep_discarded=args['--keep_discarded']
 
   filtering(folder, pathmodel, pathdataset, keep_discarded)
