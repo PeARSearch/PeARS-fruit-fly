@@ -26,8 +26,8 @@ from docopt import docopt
 csv.field_size_limit(sys.maxsize)
 
 def get_n_docs(folder_txt, n_docs):
-    globs = glob.glob("./"+folder_txt+"/*.txt")
-    f_in = open("./"+folder_txt+"/docs_octis.txt", 'a', encoding='utf8')
+    globs = glob.glob("./"+folder_txt+"*.txt")
+    f_in = open("./"+folder_txt+"docs_octis.txt", 'a', encoding='utf8')
     n=0
     for file in globs:
       f_read = open(file, 'r', encoding="utf-8")
@@ -77,7 +77,7 @@ def preprocess(docs, pathdataset):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = args['--folder']
+    folder_txt = args['--folder']+"/"
     n_docs = args['--ndocs']
     pathdataset=args['--pathdataset']
 
