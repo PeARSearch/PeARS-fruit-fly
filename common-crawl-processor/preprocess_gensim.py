@@ -63,10 +63,11 @@ def preprocess(docs, pathdataset):
     docs = [[token for token in doc if not token.isnumeric()] for doc in docs]
     docs = [[token for token in doc if len(token) > 1] for doc in docs]
 
-    dictionary = Dictionary(docs)
-    pickle.dump(dictionary, open(pathdataset+'/dict_gensim.p', 'wb'))
+    txt_dict=open("vocabulary.txt", 'r')
+    tokens=[[line] for line in txt_dict.read().splitlines()]
 
-    dictionary.filter_extremes(no_below=20, no_above=0.6)
+    dictionary = Dictionary(tokens)
+    pickle.dump(dictionary, open(pathdataset+'/dict_gensim.p', 'wb'))
 
     corpus = [dictionary.doc2bow(doc) for doc in docs]
     pickle.dump(corpus, open(pathdataset+'/corpus_train.p', 'wb'))
