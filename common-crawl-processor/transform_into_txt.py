@@ -15,7 +15,6 @@ Options:
 import glob
 import csv
 import gzip
-import shutil
 import os
 from docopt import docopt
 
@@ -23,13 +22,8 @@ def transform_xml_into_txt(f_globs, folder):
 	f_txt = './'+folder+'/docs_0.txt'
 	n_file=0
 	n_doc=0
-	for f in f_globs:
-		with gzip.open(f, 'rb') as f_in:
-			unzipped_f = f.replace(".gz", "")
-			with open(unzipped_f, 'wb') as f_out:
-				shutil.copyfileobj(f_in, f_out)
-
-		with open(unzipped_f, 'r') as filename:
+	for f_gz in f_globs:
+		with gzip.open(f_gz,'rt') as f:
 			doc = ""
 			for line in filename.read().splitlines():
 				if line.startswith("<doc"):
@@ -57,7 +51,6 @@ def transform_xml_into_txt(f_globs, folder):
 				else: 
 					doc = doc+" "+line
 					continue
-		os.remove(unzipped_f)
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
