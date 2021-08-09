@@ -48,7 +48,7 @@ def getktopics_prob(lda, word, k, corpus, idx_topics, docs):
         dic[i]['topics'].append(idx_topics[tup[0]])
 
   df=pd.DataFrame.from_dict(dic, orient='index')
-  df.to_csv("topkprob_word.csv")
+  df.to_csv(f"topkprob_{word}.csv")
   print(df)
   return df
   
