@@ -34,8 +34,31 @@ def load_model(filepath):
   lda = LdaModel.load(temp_file, mmap='r')
   return lda
 
-def getktopics_prob(lda, word, k, corpus, idx_topics, docs):
+def load_original_documents(folder_txt):
+  docs=[]
+  txt_ori = open(folder_txt+"/docs_octis.txt")
+  for line in txt_ori.read().splitlines():
+    docs.append(line)
+  return docs
+
+def load_corpus(pathdataset)
+  corpus=pickle.load(open(pathdataset+'/corpus_train.p', 'rb'))
+  print(f"Original documents and corpus loaded...")
+  return corpus
+
+def load_idx_topics(pathdataset)
+  idx_topics = {}
+  txt = open(f'./{pathdataset}/topics_lda.txt', 'w')
+  for top in txt.read().splitlines():
+    top=top.split("\t")
+    idx_topics[top[1]]=top[0]
+  return idx_topics
+
+def getktopics_prob(lda, word, k, pathdataset, folder_txt):
   dic={}
+  corpus=load_corpus(pathdataset)
+  idx_topics=load_idx_topics(pathdataset)
+  docs = load_original_documents(folder_txt)
   for i, doc in enumerate(docs):
     tops_text=lda.get_document_topics(corpus[i], minimum_probability=0)
     tops_text = sorted(tops_text, key=lambda x:x[1], reverse=True)
@@ -62,16 +85,5 @@ if __name__ == '__main__':
     k = int(args['--topk'])
     word = args['--word']
 
-    docs=[]
-    txt_ori = open(folder_txt+"/docs_octis.txt")
-    for line in txt_ori.read().splitlines():
-        docs.append(line)
-
-    corpus=pickle.load(open(pathdataset+'/corpus_train.p', 'rb'))
-    print(f"Original documents and corpus loaded...")
-    print()
-
-    idx_topics=pickle.load(open("dic_topics.pickle", 'rb'))
-
     lda = load_model(pathmodel)
-    getktopics_prob(lda, word, k, corpus, idx_topics, docs)
+    getktopics_prob(lda, word, k, pathdataset, folder_txt)
