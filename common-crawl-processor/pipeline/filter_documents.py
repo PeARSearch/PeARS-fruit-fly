@@ -47,20 +47,20 @@ def load_everything(pathdataset, pathmodel):
 
 def filtering(folder, pathmodel, pathdataset, keep_discarded):
 	dictionary, lda, tokenizer, topics=load_everything(pathdataset, pathmodel)
-	j_keep = 'kept_0.json'
-	if keep_discarded == 'True':
-		j_disc= 'discarded_0.json'
 	if os.path.isdir("corpus"):
 	    pass
 	else:
 	    os.makedirs("corpus")
+	j_keep = './corpus/kept_0.json'
+	if keep_discarded == 'True':
+		j_disc= './corpus/discarded_0.json'
 	n_doc=0
 	n_kept=0
 	f_globs= glob.glob(folder+"*.gz")
 	for f in f_globs:
 		print(f)
 		with gzip.open(f, 'rb') as f_in:
-			unzipped_f = folder+f.replace(".gz", "").split("/")[-1] #f.replace(".gz", "") 
+			unzipped_f = folder+f.replace(".gz", "").split("/")[-1] 
 			with open(unzipped_f, 'wb') as f_out:
 				shutil.copyfileobj(f_in, f_out)
 
@@ -85,11 +85,11 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 							dic['lang']='en'
 							dic['title']=title
 							dic['url']=url
-							j_keep=utils.append_json_check_len(dic, j_keep, "corpus/")
+							j_keep=utils.append_json_check_len(dic, j_keep)
 							n_kept+=1
 						else:
 							if keep_discarded=='True':
-								j_disc=utils.append_json_check_len(dic, j_disc, "corpus/")
+								j_disc=utils.append_json_check_len(dic, j_disc)
 						n_doc+=1
 						if n_doc%100==0:
 							print(f"{n_doc} documents checked and {n_kept} documents kept so far...")
