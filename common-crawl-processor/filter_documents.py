@@ -18,7 +18,6 @@ Options:
 import glob
 import csv
 import gzip
-import shutil
 import os
 from docopt import docopt
 import utils
@@ -57,14 +56,8 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 	n_doc=0
 	n_kept=0
 	f_globs= glob.glob(folder+"*.gz")
-	for f in f_globs:
-		print(f)
-		with gzip.open(f, 'rb') as f_in:
-			unzipped_f = folder+f.replace(".gz", "").split("/")[-1] 
-			with open(unzipped_f, 'wb') as f_out:
-				shutil.copyfileobj(f_in, f_out)
-
-		with open(unzipped_f, 'r') as filename:
+	for f_gz in f_globs:
+		with gzip.open(f_gz,'rt') as f:
 			for line in filename.read().splitlines():
 				if line.startswith("<doc"):
 					doc=""
@@ -107,7 +100,6 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 					else:
 						doc=doc+" "+line
 					continue
-		os.remove(unzipped_f)
 
 if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
