@@ -38,8 +38,7 @@ def train_lda(outputfile, pathdataset):
 	corpus=pickle.load(open(pathdataset+'/corpus_train.p', 'rb'))
 	print(f"Dictionary and corpus loaded from {pathdataset}...")
 
-	# Make a index to word dictionary.
-	temp = dictionary[0]  # This is only to "load" the dictionary.
+	temp = dictionary[0]  
 	id2word = dictionary.id2token
 
 	lda = LdaModel(
