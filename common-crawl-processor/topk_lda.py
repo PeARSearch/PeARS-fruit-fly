@@ -39,6 +39,7 @@ def load_original_documents(folder_txt):
   txt_ori = open(folder_txt+"/docs_octis.txt")
   for line in txt_ori.read().splitlines():
     docs.append(line)
+  txt_ori.close()
   return docs
 
 def load_corpus(pathdataset):
@@ -48,10 +49,11 @@ def load_corpus(pathdataset):
 
 def load_idx_topics(pathdataset):
   idx_topics = {}
-  txt = open(f'./{pathdataset}/topics_lda.txt', 'w')
+  txt = open(f'./{pathdataset}/topics_lda.txt', 'r')
   for top in txt.read().splitlines():
     top=top.split("\t")
     idx_topics[top[1]]=top[0]
+  txt.close()
   return idx_topics
 
 def getktopics_prob(lda, word, k, pathdataset, folder_txt):
