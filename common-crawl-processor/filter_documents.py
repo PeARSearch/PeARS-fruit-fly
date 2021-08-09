@@ -102,6 +102,7 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 					else:
 						doc=doc+" "+line
 					continue
+		os.remove(unzipped_f)
 
 if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
