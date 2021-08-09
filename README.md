@@ -16,7 +16,7 @@ We recommend installing the code in a virtual environment (under Python3.6):
 Install requirements:
 
     cd PeARS-fruit-fly/
-    source bin activate
+    source bin/activate
     pip install -r requirements.txt
 
 ## Repository structure
