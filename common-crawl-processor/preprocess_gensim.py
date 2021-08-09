@@ -66,8 +66,7 @@ def preprocess(docs, pathdataset):
     dictionary = Dictionary(docs)
     pickle.dump(dictionary, open(pathdataset+'/dict_gensim.p', 'wb'))
 
-    # Filter out words that occur less than 20 documents, or more than 50% of the documents.
-    dictionary.filter_extremes(no_below=150, no_above=0.5)
+    dictionary.filter_extremes(no_below=20, no_above=0.6)
 
     corpus = [dictionary.doc2bow(doc) for doc in docs]
     pickle.dump(corpus, open(pathdataset+'/corpus_train.p', 'wb'))
