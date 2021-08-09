@@ -57,6 +57,7 @@ def transform_xml_into_txt(f_globs, folder):
 				else: 
 					doc = doc+" "+line
 					continue
+		os.remove(unzipped_f)
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
