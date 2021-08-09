@@ -36,7 +36,7 @@ def load_model(filepath):
 
 def load_original_documents(folder_txt):
   docs=[]
-  txt_ori = open(folder_txt+"/docs_octis.txt")
+  txt_ori = open(folder_txt+"/corpus_lda.txt")
   for line in txt_ori.read().splitlines():
     docs.append(line)
   txt_ori.close()
@@ -52,7 +52,7 @@ def load_idx_topics(pathdataset):
   txt = open(f'./{pathdataset}/topics_lda.txt', 'r')
   for top in txt.read().splitlines():
     top=top.split("\t")
-    idx_topics[top[1]]=top[0]
+    idx_topics[int(top[1])]=top[0]
   txt.close()
   return idx_topics
 
@@ -81,7 +81,7 @@ def getktopics_prob(lda, word, k, pathdataset, folder_txt):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = "../"+args['--folder']
+    folder_txt = "./"+args['--folder']
     pathdataset = "./"+args['--pathdataset']
     pathmodel=args['--pathmodel']
     k = int(args['--topk'])
