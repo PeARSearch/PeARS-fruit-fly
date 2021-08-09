@@ -89,6 +89,11 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 							n_kept+=1
 						else:
 							if keep_discarded=='True':
+								dic={}
+								dic['doc']=doc
+								dic['lang']='en'
+								dic['title']=title
+								dic['url']=url
 								j_disc=utils.append_json_check_len(dic, j_disc)
 						n_doc+=1
 						if n_doc%100==0:
