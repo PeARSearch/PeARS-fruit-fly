@@ -34,21 +34,21 @@ We are going to use a topic modelling approach to remove unwanted content. First
      
 We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. The vocabulary for the LDA model has already been created and it's available in 'vocabulary.txt'. The code below calls this file for creating a bag of words for each document. 
 
-     python3 preprocess_gensim.py --folder=processed_wet --ndocs=10000 --pathdataset=gensim_data
+     python3 preprocess_gensim.py --folder=processed_wet --ndocs=10000 --pathdataset=gensim_lda
      
 Then we train our LDA model. To do that, run:
 
-     python3 train_lda.py --pathdataset=gensim_data --outputfile=model_lda
+     python3 train_lda.py --pathdataset=gensim_lda --outputfile=model_lda
      
 Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection. You can see the results of your word search in the file named 'topkprob_word.csv' after running the code below: 
 
-     python3 topk_lda.py --folder=processed_wet --pathdataset=gensim_data --pathmodel=model_lda --topk=3 --word=var
+     python3 topk_lda.py --folder=processed_wet --pathdataset=gensim_lda --pathmodel=model_lda --topk=3 --word=var
 
 Now you're ready to filter your Common Crawl corpus with your topics of choice to be discarded. 
 
 ## Filtering documents
 
-The purpose of the next steps are to remove inappropriate content and only save the relevant documents in our corpus. This step requires some manual work because you will need to choose the thresholds and the topics you want to exclude. You can replace our example in the 'topics_threshold.txt' file and add your own according to your analysis. On the first columns there are the indexes of the topics returned from the model and on the second column the corresponding probability threshold. You can find the indexes and topics from your model in the './gensim_data/topics_lda.txt' file. The output of the code below is a json file with a dictionary per line, each dictionary contains the keys 'doc', 'title', 'url' and 'lang' of each document kept in the preprocessing. The files are named 'kept_n.json' and are located in the newly created folder 'corpus'. If you set keep_discarded to True, the discarded documents are saved as well in a separate json file named 'discarded_n.json'.
+The purpose of the next steps are to remove inappropriate content and only save the relevant documents in our corpus. This step requires some manual work because you will need to choose the thresholds and the topics you want to exclude. You can replace our example in the 'topics_threshold.txt' file and add your own according to your analysis. On the first column, there are the indexes of the topics returned from the model, and on space separated column, their corresponding probability threshold. You can find the indexes and topics from your model in the './gensim_data/topics_lda.txt' file. The output of the code below is a json file with a dictionary per line, each dictionary contains the keys 'doc', 'title', 'url' and 'lang' of each document kept in the preprocessing. The files are named 'kept_n.json' and are located in the newly created folder 'corpus'. If you set keep_discarded to True, the discarded documents are saved as well in a separate json file named 'discarded_n.json'.
 
 For that, run:
 
