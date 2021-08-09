@@ -41,12 +41,12 @@ def load_original_documents(folder_txt):
     docs.append(line)
   return docs
 
-def load_corpus(pathdataset)
+def load_corpus(pathdataset):
   corpus=pickle.load(open(pathdataset+'/corpus_train.p', 'rb'))
   print(f"Original documents and corpus loaded...")
   return corpus
 
-def load_idx_topics(pathdataset)
+def load_idx_topics(pathdataset):
   idx_topics = {}
   txt = open(f'./{pathdataset}/topics_lda.txt', 'w')
   for top in txt.read().splitlines():
