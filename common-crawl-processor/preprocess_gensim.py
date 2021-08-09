@@ -31,7 +31,7 @@ def get_n_docs(folder_txt, n_docs):
     n=0
     for file in globs:
       f_read = open(file, 'r', encoding="utf-8")
-      for line in f_read.readlines():
+      for line in f_read.read().splitlines():
         if n>n_docs:
           break
         else:
