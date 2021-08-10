@@ -1,7 +1,7 @@
 """Common Crawl processor - pre-processing of a number of texts to be fed into the topic model (LDA) of the OCTIS library. 
 
 Usage:
-  preprocess_gensim.py --folder=<foldername> --ndocs=<numberofwebdocs> --pathdataset=<foldername> 
+  preprocess_gensim.py --folder=<foldername> --ndocs=<numberofdocs> --lda_path=<foldername>
   preprocess_gensim.py (-h | --help)
   preprocess_gensim.py --version
 
@@ -11,7 +11,7 @@ Options:
   --version     Show version.
   --folder=<foldername>     Name of the folder where the zipped .xml files are located
   --ndocs=<numberofdocs>         Number of documents to be preprocessed for training the topic model
-  --pathdataset=<foldername>       Folder where the pre-processed dataset will be placed
+  --lda_path=<foldername>       Folder where the pre-processed dataset will be placed
 
 """
 
@@ -50,11 +50,11 @@ def list_docs(folder_txt):
       docs.append(line)
     return docs
 
-def preprocess(docs, pathdataset):
-    if os.path.isdir(pathdataset):
+def preprocess(docs, lda_path):
+    if os.path.isdir(lda_path):
         pass
     else:
-        os.makedirs(pathdataset)
+        os.makedirs(lda_path)
     tokenizer = RegexpTokenizer(r'\w+')
     for idx in range(len(docs)):
         docs[idx] = docs[idx].lower()  # Convert to lowercase.
@@ -67,10 +67,10 @@ def preprocess(docs, pathdataset):
     tokens=[[line] for line in txt_dict.read().splitlines()]
 
     dictionary = Dictionary(tokens)
-    pickle.dump(dictionary, open(pathdataset+'/dict_gensim.p', 'wb'))
+    pickle.dump(dictionary, open(lda_path+'/dict_gensim.p', 'wb'))
 
     corpus = [dictionary.doc2bow(doc) for doc in docs]
-    pickle.dump(corpus, open(pathdataset+'/corpus_train.p', 'wb'))
+    pickle.dump(corpus, open(lda_path+'/corpus_train.p', 'wb'))
     print('Number of unique tokens: %d' % len(dictionary))
     print('Number of documents: %d' % len(corpus))
 
@@ -79,9 +79,9 @@ if __name__ == '__main__':
 
     folder_txt = args['--folder']+"/"
     n_docs = args['--ndocs']
-    pathdataset=args['--pathdataset']
+    lda_path=args['--lda_path']
 
     get_n_docs(folder_txt, int(n_docs))
     docs=list_docs(folder_txt)
-    preprocess(docs, pathdataset)
+    preprocess(docs, lda_path)
 
