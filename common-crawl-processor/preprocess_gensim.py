@@ -27,13 +27,13 @@ csv.field_size_limit(sys.maxsize)
 
 
 def get_n_docs(folder, n_docs):
-    globs = glob.glob("./"+folder+"*.txt")
-    f_in = open("./"+folder+"docs_octis.txt", 'a', encoding='utf8')
+    globs = glob.glob("./"+folder+"docs*.txt")
+    f_in = open("./"+folder+"corpus_lda.txt", 'w', encoding='utf8')
     n=0
     for file in globs:
       f_read = open(file, 'r', encoding="utf-8")
       for line in f_read.read().splitlines():
-        if n>n_docs:
+        if n >= n_docs:
           break
         else:
           f_in.write(line+'\n')
@@ -46,7 +46,7 @@ def get_n_docs(folder, n_docs):
 
 def list_docs(folder):
     docs = []  #complete web docs
-    f_doc = open(folder+'docs_octis.txt', 'r', encoding='utf-8')
+    f_doc = open(folder+'corpus_lda.txt', 'r', encoding='utf-8')
     for line in f_doc.read().splitlines():
       docs.append(line)
     return docs
