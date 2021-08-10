@@ -8,7 +8,7 @@ Usage:
 Options:
   -h --help     Show this screen.
   --version     Show version.
-  --lda_path=<foldername>	Name of the folder where the preprocessed documents are.
+  --lda_path=<foldername>	  Name of the folder where the preprocessed documents are.
   --model_out=<filename>		Name of the file where the output of the lda model will be saved.
 
 """
@@ -27,7 +27,7 @@ import pickle
 from itertools import chain
 import pandas as pd
 
-def train_lda(model_out, lda_path):
+def train_lda(lda_path, model_out):
 	tic = time.time()
 	chunksize = 2000
 	passes = 20
@@ -71,4 +71,5 @@ if __name__ == '__main__':
 	
 	lda_path=args['--lda_path']
 	model_out=args['--model_out']
-	train_lda(model_out, lda_path)
+	train_lda(lda_path, model_out)
+

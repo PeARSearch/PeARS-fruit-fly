@@ -1,7 +1,7 @@
 """Common Crawl processor - retrieve the top k topics with a specific keyword associated with the documents
 
 Usage:
-  topk_lda.py --folder=<foldername> --lda_path=<foldername> --model=<pathname> --topk=<highestktopics> --word=<word>
+  topk_lda.py --folder=<foldername> --lda_path=<foldername> --model=<filename> --topk=<highestktopics> --word=<word>
   topk_lda.py (-h | --help)
   topk_lda.py --version
 
@@ -21,9 +21,9 @@ import pickle
 import numpy as np
 import csv
 import sys
-from gensim.test.utils import datapath
 from gensim.corpora import Dictionary
 from gensim.models import LdaModel
+from gensim.test.utils import datapath
 from collections import defaultdict
 import pandas as pd
 from docopt import docopt
@@ -55,6 +55,7 @@ def load_idx_topics(lda_path):
     idx_topics[int(top[1])]=top[0].split(", ")
   txt.close()
   return idx_topics
+
 
 def getktopics_prob(lda, word, k, lda_path, folder):
   dic={}

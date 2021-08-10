@@ -1,17 +1,17 @@
 """Common Crawl processor - pre-processing of a number of texts to be fed into the topic model (LDA) of the OCTIS library. 
 
 Usage:
-  preprocess_gensim.py --folder=<foldername> --ndocs=<numberofdocs> --lda_path=<foldername>
+  preprocess_gensim.py --folder=<foldername> --ndocs=<n> --lda_path=<foldername> 
   preprocess_gensim.py (-h | --help)
   preprocess_gensim.py --version
 
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
-  --folder=<foldername>     Name of the folder where the zipped .xml files are located
-  --ndocs=<numberofdocs>         Number of documents to be preprocessed for training the topic model
-  --lda_path=<foldername>       Folder where the pre-processed dataset will be placed
+  -h --help                        Show this screen.
+  --version                        Show version.
+  --folder=<foldername>            Name of the folder where the zipped .xml files are located
+  --ndocs=<n>                      Number of documents to be preprocessed for training the topic model
+  --lda_path=<foldername>          Folder where the pre-processed dataset will be placed
 
 """
 
@@ -25,6 +25,7 @@ import pickle
 from docopt import docopt
 csv.field_size_limit(sys.maxsize)
 
+
 def get_n_docs(folder, n_docs):
     globs = glob.glob("./"+folder+"*.txt")
     f_in = open("./"+folder+"docs_octis.txt", 'a', encoding='utf8')
@@ -35,7 +36,7 @@ def get_n_docs(folder, n_docs):
         if n>n_docs:
           break
         else:
-          f_in.write(line)
+          f_in.write(line+'\n')
           n+=1
         if n%200==0:
           print(f"{n} processed")

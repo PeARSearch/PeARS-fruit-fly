@@ -13,6 +13,7 @@ def append_as_json(dic, f):
   output_file.write("\n")
 
 def append_json_check_len(dic, filename):
+  new_filename=filename
   output_file = open(filename, 'a', encoding='utf-8') 
   if os.path.exists(filename):
     if os.path.getsize(filename) < 524288000:

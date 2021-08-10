@@ -1,18 +1,17 @@
 """Common Crawl processor - filter documents from innapropriate content and return .json files with clean documents and their respective metadata at each line
 
 Usage:
-  filter_documents.py --folder=<foldername> --model=<pathmodel> --lda_path=<foldername> --keep_discarded=<boolean>
+  filter_documents.py --folder=<foldername> --model=<pathname> --lda_path=<foldername> --keep_discarded=<boolean>
   filter_documents.py (-h | --help)
   filter_documents.py --version
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
-  --folder=<foldername>     Only the name of the folder where the zipped .xml files are located
+  -h --help                     Show this screen.
+  --version                     Show version.
+  --folder=<foldername>         Only the name of the folder where the zipped .xml files are located
   --model =<pathname>		Where the LDA model has been saved
   --lda_path=<foldername>	Where the information from LDA has been saved
-  --keep_discarded=<boolean>	True if you want to keep the discarded documents, otherwise False.
-
+  --keep_discarded=<boolean>	True if you want to keep the documents discarded, otherwise False.
 """
 
 import glob
@@ -43,6 +42,7 @@ def load_everything(lda_path, model):
 		t=t.split(" ")
 		topics[int(t[0])]=float(t[-1])
 	return dictionary, lda, tokenizer, topics
+
 
 def filtering(folder, model, lda_path, keep_discarded):
 	dictionary, lda, tokenizer, topics=load_everything(lda_path, model)
@@ -78,7 +78,7 @@ def filtering(folder, model, lda_path, keep_discarded):
 							dic['lang']='en'
 							dic['title']=title
 							dic['url']=url
-							j_keep=utils.append_json_check_len(dic, j_keep)
+							utils.append_json_check_len(dic, j_keep)
 							n_kept+=1
 						else:
 							if keep_discarded=='True':
