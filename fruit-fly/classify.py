@@ -59,11 +59,11 @@ def prepare_data(tr_file):
 
     class_ids = get_single_classes(pickle.load(open(tr_file.replace("hs","cls"),'rb')))
     classes_train = np.array(make_output(pickle.load(open(tr_file.replace("hs","cls"),'rb')),class_ids))
-    print(classes_train)
+    #print(classes_train)
     classes_val = np.array(make_output(pickle.load(open(dev_file.replace("hs","cls"),'rb')),class_ids))
 
     ids_train = np.array([i for i in range(m_train.shape[0])])
-    print(ids_train)
+    #print(ids_train)
     ids_val = np.array([i for i in range(m_val.shape[0])])
 
     return m_train,classes_train,m_val,classes_val,ids_train,ids_val
@@ -77,4 +77,4 @@ if __name__ == '__main__':
 
     m_train,classes_train,m_val,classes_val,ids_train,ids_val = prepare_data(tr_file)
     score, lm = train_model(m_train,classes_train,m_val,classes_val,C,num_iter)
-    print(score)
+    print("SCORE:",score)
