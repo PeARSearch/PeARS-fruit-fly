@@ -25,7 +25,7 @@ def transform_xml_into_txt(f_globs, folder):
 	for f_gz in f_globs:
 		with gzip.open(f_gz,'rt') as f:
 			doc = ""
-			for line in filename.read().splitlines():
+			for line in f.read().splitlines():
 				if line.startswith("<doc"):
 					doc = ""
 					continue
