@@ -32,31 +32,45 @@ We are going to use a topic modelling approach to remove unwanted content. First
 
      python3 transform_into_txt.py --folder=processed_wet
      
-We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. The vocabulary for the LDA model has already been created and it's available in 'vocabulary.txt'. The code below calls this file for creating a bag of words for each document. 
+We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. LDA is a technique that assigns so-called 'topics' to documents, where each topic is expressed as a collection of characteristic words. For instance, the following might be a topic about fencing and gating:
 
-     python3 preprocess_gensim.py --folder=processed_wet --ndocs=10000 --pathdataset=gensim_lda
+     iron, wrought, ca, gates, fence, company, fencing, gate, ornamental, contractor
+
+LDA probabilistically assigns topics to documents. So for instance, the Web page of a fence manufacturer might have a 0.6 probability of including the fencing topic, and a 0.4 probability of including a shopping topic.
+
+We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. The vocabulary for the LDA model has already been created and it's available in 'vocabulary.txt'. The code below calls this file for creating a bag of words for each document. 
+
+     python3 preprocess_gensim.py --folder=processed_wet --ndocs=2000 --lda_path=gensim_lda
      
 Then we train our LDA model. To do that, run:
 
-     python3 train_lda.py --pathdataset=gensim_lda --outputfile=model_lda
-     
-Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection. You can see the results of your word search in the file named 'topkprob_word.csv' after running the code below: 
+     python3 train_lda.py --lda_path=gensim_lda --model_out=model_lda
 
-     python3 topk_lda.py --folder=processed_wet --pathdataset=gensim_lda --pathmodel=model_lda --topk=3 --word=var
+The 100 topics created by the LDA model are visible at *gensim_lda/topics_lda.txt*, together with an ID number.
+
+Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection. 
+
+     python3 topk_lda.py --folder=processed_wet --lda_path=gensim_lda --model=model_lda --topk=3 --word=var
+
+The complete output of the script can be found in a .csv file. For our example, *topkprob_var.csv* should show you the documents that were labeled with a topic containing the word *var*. 
 
 Now you're ready to filter your Common Crawl corpus with your topics of choice to be discarded. 
 
 ## Filtering documents
 
-The purpose of the next steps are to remove inappropriate content and only save the relevant documents in our corpus. This step requires some manual work because you will need to choose the thresholds and the topics you want to exclude. You can replace our example in the 'topics_threshold.txt' file and add your own according to your analysis. On the first column, there are the indexes of the topics returned from the model, and on space separated column, their corresponding probability threshold. You can find the indexes and topics from your model in the './gensim_data/topics_lda.txt' file. The output of the code below is a json file with a dictionary per line, each dictionary contains the keys 'doc', 'title', 'url' and 'lang' of each document kept in the preprocessing. The files are named 'kept_n.json' and are located in the newly created folder 'corpus'. If you set keep_discarded to True, the discarded documents are saved as well in a separate json file named 'discarded_n.json'.
+The purpose of the next steps are to remove inappropriate content and only save the relevant documents in our corpus. This step requires some manual work because you will need to choose some probability thresholds on the topics you want to exclude. Those thresholds You can replace our example in the *topics_threshold.txt* file and add your own according to your analysis. The *topics_threshold* file looks like this:
 
-For that, run:
+     10 0.1
+     59 0.2
+     ...
 
-    python3 filter_documents.py --folder=processed_wet --pathmodel=model_lda --pathdataset=gensim_lda --keep_discarded=True
+The first column shows the indices of the topics to be discarded (as given in *gensim_lda/topics_lda.txt*), and the second column the corresponding probability thresholds. The line *10 0.1* indicates that we want to discard any document which has a probability of at least 0.1 of containing the topic with ID 10. 
+
+Once you have chosen topics and thresholds, you can run the following:
+
+    python3 filter_documents.py --folder=processed_wet --model=model_lda --lda_path=gensim_lda --keep_discarded=True
+    
+The output of the code is a json file with a dictionary per line, each dictionary contains the keys 'doc', 'title', 'url' and 'lang' of each document kept in the preprocessing. The files are named *kept_n.json* and are located in the newly created folder *./corpus*. If you set *--keep_discarded* to *True*, the discarded documents are saved as well in a separate json file named *discarded_n.json*.
     
 You can process as many documents as you like (or as many locations as you have) until you reach a corpus size that suits you, just hit Ctrl+C when you want to stop the code. 
     
-
-
-     
-
