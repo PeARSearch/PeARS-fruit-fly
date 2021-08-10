@@ -7,11 +7,11 @@ Usage:
 
 
 Options:
-  -h --help                     Show this screen.
-  --version                     Show version.
-  --folder=<foldername>         Name of the folder where the .txt files are located
-  --lda_path=<foldername>     Name of the folder where the preprocessed LDA data is located  
-  --model=<filename>            Name of the file that where the LDA model has been saved
+  -h --help     Show this screen.
+  --version     Show version.
+  --folder=<foldername>      Name of the folder where the .txt files are located
+  --lda_path=<foldername>    Name of the folder where the preprocessed data is located  
+  --model=<pathname>         Name of the file that where the LDA model has been saved
   --topk=<highestktopics>       Number of topics with the highest topics associated with documents
   --word=<word>                 Word to be focused in your search of topics
 
@@ -29,14 +29,14 @@ import pandas as pd
 from docopt import docopt
 csv.field_size_limit(sys.maxsize)
 
-def load_model(filepath):
-  temp_file = datapath(filepath)
+def load_model(model):
+  temp_file = datapath(model)
   lda = LdaModel.load(temp_file, mmap='r')
   return lda
 
-def load_original_documents(folder_txt):
+def load_original_documents(folder):
   docs=[]
-  txt_ori = open(folder_txt+"/corpus_lda.txt")
+  txt_ori = open(folder+"/corpus_lda.txt")
   for line in txt_ori.read().splitlines():
     docs.append(line)
   txt_ori.close()
@@ -56,11 +56,12 @@ def load_idx_topics(lda_path):
   txt.close()
   return idx_topics
 
-def getktopics_prob(lda, word, k, lda_path, folder_txt):
+
+def getktopics_prob(lda, word, k, lda_path, folder):
   dic={}
   corpus=load_corpus(lda_path)
   idx_topics=load_idx_topics(lda_path)
-  docs = load_original_documents(folder_txt)
+  docs = load_original_documents(folder)
   for i, doc in enumerate(docs):
     tops_text=lda.get_document_topics(corpus[i], minimum_probability=0)
     tops_text = sorted(tops_text, key=lambda x:x[1], reverse=True)
@@ -81,11 +82,11 @@ def getktopics_prob(lda, word, k, lda_path, folder_txt):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = "./"+args['--folder']
+    folder = "./"+args['--folder']
     lda_path = "./"+args['--lda_path']
     model=args['--model']
     k = int(args['--topk'])
     word = args['--word']
 
     lda = load_model(model)
-    getktopics_prob(lda, word, k, lda_path, folder_txt)
+    getktopics_prob(lda, word, k, lda_path, folder)

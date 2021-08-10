@@ -6,9 +6,9 @@ Usage:
   train_lda.py --version
 
 Options:
-  -h --help                             Show this screen.
-  --version                             Show version.
-  --lda_path=<foldername>	        Name of the folder where the preprocessed documents are.
+  -h --help     Show this screen.
+  --version     Show version.
+  --lda_path=<foldername>	  Name of the folder where the preprocessed documents are.
   --model_out=<filename>		Name of the file where the output of the lda model will be saved.
 
 """
@@ -72,3 +72,4 @@ if __name__ == '__main__':
 	lda_path=args['--lda_path']
 	model_out=args['--model_out']
 	train_lda(lda_path, model_out)
+

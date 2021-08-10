@@ -27,14 +27,14 @@ from gensim.test.utils import datapath
 from gensim.models import LdaModel
 
 
-def load_model(pathmodel):
-  temp_file = datapath(pathmodel)
+def load_model(model):
+  temp_file = datapath(model)
   lda = LdaModel.load(temp_file, mmap='r')
   return lda
 
-def load_everything(lda_path, pathmodel):
+def load_everything(lda_path, model):
 	dictionary=pickle.load(open(lda_path+'dict_gensim.p', 'rb'))
-	lda = load_model(pathmodel)
+	lda = load_model(model)
 	tokenizer = RegexpTokenizer(r'\w+')
 	topics={}
 	txt=open('topics_threshold.txt', 'r')
@@ -43,8 +43,9 @@ def load_everything(lda_path, pathmodel):
 		topics[int(t[0])]=float(t[-1])
 	return dictionary, lda, tokenizer, topics
 
-def filtering(folder, pathmodel, lda_path, keep_discarded):
-	dictionary, lda, tokenizer, topics=load_everything(lda_path, pathmodel)
+
+def filtering(folder, model, lda_path, keep_discarded):
+	dictionary, lda, tokenizer, topics=load_everything(lda_path, model)
 	if os.path.isdir("corpus"):
 	    pass
 	else:
