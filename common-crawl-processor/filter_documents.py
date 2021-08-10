@@ -26,7 +26,6 @@ from nltk.tokenize import RegexpTokenizer
 from gensim.test.utils import datapath
 from gensim.models import LdaModel
 
-
 def load_model(model):
   temp_file = datapath(model)
   lda = LdaModel.load(temp_file, mmap='r')
@@ -100,6 +99,7 @@ def filtering(folder, model, lda_path, keep_discarded):
 					else:
 						doc=doc+" "+line
 					continue
+	return j_keep
 
 if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
@@ -110,4 +110,6 @@ if __name__ == '__main__':
   lda_path="./"+args['--lda_path']+"/"
   keep_discarded=args['--keep_discarded']
 
-  filtering(folder, model, lda_path, keep_discarded)
+  j_keep=filtering(folder, model, lda_path, keep_discarded)
+  utils.compress_file(j_keep)
+
