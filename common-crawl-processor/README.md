@@ -46,6 +46,8 @@ Then we train our LDA model. To do that, run:
 
      python3 train_lda.py --lda_path=gensim_lda --model_out=model_lda
 
+This will take a few minutes for 2000 documents (more if you train over a larger set). So go and get a cup of coffee. For best performance, we recommend training over a few tens of thousands of documents.
+
 The 100 topics created by the LDA model are visible at *gensim_lda/topics_lda.txt*, together with an ID number.
 
 Now we can have a look at the top k topics that have been assigned for our web documents, using specific terms to catch topics we might want to remove. For instance, the following returns documents with topics containing the term *var*. Those documents are pieces of JavaScript code which we probably want to discard in our final collection. 
