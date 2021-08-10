@@ -46,9 +46,8 @@ def evaluate(top_word, KC_size, proj_size, percent_hash, C, num_iter, num_trial)
     score_list = []
     pointer = 0
     for num_job in job_list:
-        score_model_list = joblib.Parallel(n_jobs=num_job, prefer="threads")(
+        score_list += joblib.Parallel(n_jobs=num_job, prefer="threads")(
             joblib.delayed(_hash_n_train)(model_file) for model_file in model_files[pointer:pointer+num_job])
-        score_list += [i for i in score_model_list]
         pointer += num_job
 
     avg_score = np.mean(score_list)
