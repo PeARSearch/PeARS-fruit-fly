@@ -7,10 +7,9 @@ Simply run this command to download the three datasets, and pre-process them for
 
     python prepare_datasets.py
 
-It may take a few minutes to download and pre-process the datasets. After finishing, there will be three folders
-created in this **datasets** directory with respected to three datasets.
+The process may take a few minutes. After finishing, there will be three new folders created in the **datasets** directory, containing the necessary data.
 
-## How to create the Wikipedia dataset
+## How to re-create the Wikipedia dataset
 
 If you are curious about how the Wikipedia dataset was created, please take a look at the **create_Wiki_dataset.ipynb** notebook.
 It contains the procedures to create the ready-to-train Wikipedia dataset, which includes truncated articles from Wikipedia.
