@@ -7,3 +7,4 @@ warcio==1.7.4
 langdetect==1.0.9
 sentencepiece==0.1.96
 scikit-learn==0.24.2
+bayesian-optimization==1.2.0
