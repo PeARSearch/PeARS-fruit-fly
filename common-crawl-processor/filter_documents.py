@@ -58,7 +58,7 @@ def filtering(folder, pathmodel, pathdataset, keep_discarded):
 	f_globs= glob.glob(folder+"*.gz")
 	for f_gz in f_globs:
 		with gzip.open(f_gz,'rt') as f:
-			for line in filename.read().splitlines():
+			for line in f.read().splitlines():
 				if line.startswith("<doc"):
 					doc=""
 					try:
