@@ -12,7 +12,6 @@ Options:
   --model =<pathname>		Where the LDA model has been saved
   --lda_path=<foldername>	Where the information from LDA has been saved
   --keep_discarded=<boolean>	True if you want to keep the documents discarded, otherwise False.
-
 """
 
 import glob
