@@ -25,9 +25,9 @@ import pickle
 from docopt import docopt
 csv.field_size_limit(sys.maxsize)
 
-def get_n_docs(folder_txt, n_docs):
-    globs = glob.glob("./"+folder_txt+"*.txt")
-    f_in = open("./"+folder_txt+"docs_octis.txt", 'a', encoding='utf8')
+def get_n_docs(folder, n_docs):
+    globs = glob.glob("./"+folder+"*.txt")
+    f_in = open("./"+folder+"docs_octis.txt", 'a', encoding='utf8')
     n=0
     for file in globs:
       f_read = open(file, 'r', encoding="utf-8")
@@ -43,9 +43,9 @@ def get_n_docs(folder_txt, n_docs):
 
     f_in.close()
 
-def list_docs(folder_txt):
+def list_docs(folder):
     docs = []  #complete web docs
-    f_doc = open(folder_txt+'docs_octis.txt', 'r', encoding='utf-8')
+    f_doc = open(folder+'docs_octis.txt', 'r', encoding='utf-8')
     for line in f_doc.read().splitlines():
       docs.append(line)
     return docs
@@ -77,11 +77,11 @@ def preprocess(docs, lda_path):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor')
 
-    folder_txt = args['--folder']+"/"
+    folder = args['--folder']+"/"
     n_docs = args['--ndocs']
     lda_path=args['--lda_path']
 
-    get_n_docs(folder_txt, int(n_docs))
-    docs=list_docs(folder_txt)
+    get_n_docs(folder, int(n_docs))
+    docs=list_docs(folder)
     preprocess(docs, lda_path)
 
