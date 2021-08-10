@@ -20,12 +20,13 @@ from docopt import docopt
 
 def transform_xml_into_txt(f_globs, folder):
 	f_txt = './'+folder+'/docs_0.txt'
+	os.remove(f_txt)
 	n_file=0
 	n_doc=0
 	for f_gz in f_globs:
 		with gzip.open(f_gz,'rt') as f:
 			doc = ""
-			for line in filename.read().splitlines():
+			for line in f.read().splitlines():
 				if line.startswith("<doc"):
 					doc = ""
 					continue
