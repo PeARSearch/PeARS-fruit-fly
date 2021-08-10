@@ -1,5 +1,6 @@
-# Common-crawl-processor
-It's a pipeline to deal with web documents from Common Crawl. It selects documents from a pre-determined language, pre-processes them and removes samples with unwanted content. 
+# Common Crawl Processor
+
+Our Common Crawl pipeline contains tools to process Common Crawl dumps. It selects documents for a pre-determined language, pre-processes them and removes samples with unwanted content. 
 
 ## Getting raw text out of Common Crawl dumps
 
@@ -28,15 +29,17 @@ You should see the file being processed:
     387 documents processed 100 documents added...
     768 documents processed 200 documents added...
     
-We are going to use a topic modelling approach to remove unwanted content. First, we need to transform the .xml files into .txt.
+First, we will transform the .xml files into .txt.
 
      python3 transform_into_txt.py --folder=processed_wet
      
-We take a sample from .wet processed documents in order to train the topic model, in our case a Latent Dirichlet allocation (LDA) model, that will detect unwanted content. LDA is a technique that assigns so-called 'topics' to documents, where each topic is expressed as a collection of characteristic words. For instance, the following might be a topic about fencing and gating:
+We are going to use a *topic modelling* approach to remove unwanted content. More specifically, we will train a Latent Dirichlet allocation (LDA) model. LDA is a technique that assigns so-called 'topics' to documents, where each topic is expressed as a collection of characteristic words. For instance, the following might be a topic about fencing and gating:
 
      iron, wrought, ca, gates, fence, company, fencing, gate, ornamental, contractor
 
-LDA probabilistically assigns topics to documents. So for instance, the Web page of a fence manufacturer might have a 0.6 probability of including the fencing topic, and a 0.4 probability of including a shopping topic.
+LDA probabilistically assigns topics to documents. So the Web page of a fence manufacturer might have a 0.6 probability of including the fencing topic, and a 0.4 probability of including a shopping topic. 
+
+We will take a sample from .wet processed documents in order to train the topic model,
 
 We first need to preprocess the documents by removing highly and lowly frequent words, punctuation and numbers. We are using the Gensim library both for preprocessing and topic modelling. The vocabulary for the LDA model has already been created and it's available in 'vocabulary.txt'. The command below creates a bag of words for each document. 
 
@@ -56,7 +59,7 @@ Now we can have a look at the top k topics that have been assigned for our web d
 
 The complete output of the script can be found in a .csv file. For our example, *topkprob_var.csv* should show you the documents that were labeled with a topic containing the word *var*. 
 
-Now we are ready to filter your Common Crawl corpus with your topics of choice to be discarded. 
+Now we are ready to filter our Common Crawl corpus, choosing which topics should be discarded. 
 
 ## Filtering documents
 
