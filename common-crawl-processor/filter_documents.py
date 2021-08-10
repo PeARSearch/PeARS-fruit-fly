@@ -1,7 +1,7 @@
 """Common Crawl processor - filter documents from innapropriate content and return .json files with clean documents and their respective metadata at each line
 
 Usage:
-  filter_documents.py --folder=<foldername> --pathmodel=<pathname> --pathdataset=<foldername> --keep_discarded=<boolean>
+  filter_documents.py --folder=<foldername> --model=<pathmodel> --lda_path=<foldername> --keep_discarded=<boolean>
   filter_documents.py (-h | --help)
   filter_documents.py --version
 
@@ -9,8 +9,8 @@ Options:
   -h --help     Show this screen.
   --version     Show version.
   --folder=<foldername>     Only the name of the folder where the zipped .xml files are located
-  --pathmodel =<pathname>		Where the LDA model has been saved
-  --pathdataset=<foldername>	Where the information from LDA has been saved
+  --model =<pathname>		Where the LDA model has been saved
+  --lda_path=<foldername>	Where the information from LDA has been saved
   --keep_discarded=<boolean>	True if you want to keep the discarded documents, otherwise False.
 
 """
@@ -28,14 +28,14 @@ from gensim.test.utils import datapath
 from gensim.models import LdaModel
 
 
-def load_model(pathmodel):
-  temp_file = datapath(pathmodel)
+def load_model(model):
+  temp_file = datapath(model)
   lda = LdaModel.load(temp_file, mmap='r')
   return lda
 
-def load_everything(pathdataset, pathmodel):
-	dictionary=pickle.load(open(pathdataset+'dict_gensim.p', 'rb'))
-	lda = load_model(pathmodel)
+def load_everything(lda_path, model):
+	dictionary=pickle.load(open(lda_path+'dict_gensim.p', 'rb'))
+	lda = load_model(model)
 	tokenizer = RegexpTokenizer(r'\w+')
 	topics={}
 	txt=open('topics_threshold.txt', 'r')
@@ -44,8 +44,8 @@ def load_everything(pathdataset, pathmodel):
 		topics[int(t[0])]=float(t[-1])
 	return dictionary, lda, tokenizer, topics
 
-def filtering(folder, pathmodel, pathdataset, keep_discarded):
-	dictionary, lda, tokenizer, topics=load_everything(pathdataset, pathmodel)
+def filtering(folder, model, lda_path, keep_discarded):
+	dictionary, lda, tokenizer, topics=load_everything(lda_path, model)
 	if os.path.isdir("corpus"):
 	    pass
 	else:
@@ -106,8 +106,8 @@ if __name__ == '__main__':
 
   folder = "./"+args['--folder']+"/"
   print(folder)
-  pathmodel=args['--pathmodel']
-  pathdataset="./"+args['--pathdataset']+"/"
+  model=args['--model']
+  lda_path="./"+args['--lda_path']+"/"
   keep_discarded=args['--keep_discarded']
 
-  filtering(folder, pathmodel, pathdataset, keep_discarded)
+  filtering(folder, model, lda_path, keep_discarded)
