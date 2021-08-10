@@ -20,7 +20,7 @@ def compress_file(file_path):
     with gzip.open(file_path+'.gz', 'wb') as f_out:
       shutil.copyfileobj(f_in, f_out)   
   os.unlink(file_path)
-  print(f"{file_path} compressed as a new .gz file and then removed")
+  print(f"Newly compressed {file_path}.gz created and old {file_path} removed")
 
 def append_json_check_len(dic, file_path):
   output_file = open(file_path, 'a', encoding='utf-8') 
