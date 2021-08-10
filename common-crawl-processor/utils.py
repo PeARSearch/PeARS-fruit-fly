@@ -30,6 +30,3 @@ def append_json_check_len(dic, filename):
   json.dump(dic, output_file)
   output_file.write("\n")
   return filename
-
-def test_set():
-  return "yes"
