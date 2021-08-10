@@ -11,7 +11,7 @@ Options:
   --folder=<foldername>     Only the name of the folder where the zipped .xml files are located
   --pathmodel =<pathname>		Where the LDA model has been saved
   --pathdataset=<foldername>	Where the information from LDA has been saved
-  --keep_discarded=<boolean>	True if you want to keep the documents discarded, otherwise False.
+  --keep_discarded=<boolean>	True if you want to keep the discarded documents, otherwise False.
 
 """
 
