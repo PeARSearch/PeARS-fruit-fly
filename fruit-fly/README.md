@@ -1,5 +1,7 @@
 # Fruit Fly algorithm (FFA) for text classification
 
+Before running the code below, make sure to have downloaded the necessary datasets. More information is available from the *datasets* directory in the main repository.
+
 ## Run the FFA step by step on one dataset
 
 1. Creating random projections for the fruit fly
@@ -51,6 +53,6 @@ The validation scores and the combinations of hyper-parameters are stored in the
 Manually creating the best hyper-parameter settings in **models/best_models**. Please take a look in this folder for
 examples. Run:
 
-    python test_models.py --test_path=../datasets/wos/wos11967-test.sp --config_path=./models/best_models/wos.json
+    python test_models.py --test_path=../datasets/wos/wos11967-test.sp --config_path=./models/best_models/wos_config.json
 
 to get the average score on **--test_path** for all the hyper-parameter settings in **--config_path**.
