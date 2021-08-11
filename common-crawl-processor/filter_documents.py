@@ -71,21 +71,16 @@ def filtering(folder, model, lda_path, keep_discarded):
 				if line.startswith("</doc>"):
 					if doc != "" or doc != " ":
 						label = LDAmodel.classify_removal(doc, dictionary, lda, tokenizer, topics)
+						dic={}
+						dic['doc']=doc
+						dic['lang']='en'
+						dic['title']=title
+						dic['url']=url
 						if label != 1:
-							dic={}
-							dic['doc']=doc
-							dic['lang']='en'
-							dic['title']=title
-							dic['url']=url
 							utils.append_json_check_len(dic, j_keep)
 							n_kept+=1
 						else:
 							if keep_discarded=='True':
-								dic={}
-								dic['doc']=doc
-								dic['lang']='en'
-								dic['title']=title
-								dic['url']=url
 								j_disc=utils.append_json_check_len(dic, j_disc)
 						n_doc+=1
 						if n_doc%100==0:
