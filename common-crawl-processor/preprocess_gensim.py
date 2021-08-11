@@ -27,7 +27,7 @@ csv.field_size_limit(sys.maxsize)
 
 
 def get_n_docs(folder, n_docs):
-    globs = glob.glob("./"+folder+"docs*.txt")
+    globs = glob.glob("./"+folder+"/docs*.txt")
     f_in = open("./"+folder+"corpus_lda.txt", 'w', encoding='utf8')
     n=0
     for file in globs:
