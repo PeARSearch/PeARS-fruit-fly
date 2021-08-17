@@ -32,7 +32,7 @@ in the optimization process.
 
 20newsgroups dataset:
   
-    python hyperparam_search.py --train_path=../datasets/20news-bydate/20news-bydate-train.sp --continue_log=./log/logs_20newsgroups.json 
+    python hyperparam_search.py --train_path=../datasets/20news-bydate/20news-bydate-train.sp --continue_log=./log/logs_20news.json 
 
 will let the Bayesian optimization runs for 50 times, each time the classification will run 5 times and average the
 validation scores. The **--continue_log** argument, which is *optional*, takes the history of the Bayesian optimization and
