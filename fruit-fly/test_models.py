@@ -41,14 +41,8 @@ def evaluate(top_word, KC_size, proj_size, percent_hash, C, num_iter, num_trial)
     print('creating projections')
     model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_trial)]
     print('training')
-    job_list = [max_thread] * (num_trial // max_thread) + [num_trial % max_thread]
-    job_list = [i for i in job_list if i != 0]
-    score_list = []
-    pointer = 0
-    for num_job in job_list:
-        score_list += joblib.Parallel(n_jobs=num_job, prefer="threads")(
-            joblib.delayed(_hash_n_train)(model_file) for model_file in model_files[pointer:pointer+num_job])
-        pointer += num_job
+    score_list = joblib.Parallel(n_jobs=max_thread, prefer="threads")(
+        joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
 
     avg_score = np.mean(score_list)
     print('average score:', avg_score)
@@ -72,7 +66,7 @@ if __name__ == '__main__':
     print('reading dataset')
     test_set, test_label = read_n_encode_dataset(test_path, vectorizer, logprobs)
     train_set, train_label = read_n_encode_dataset(test_path.replace('test', 'train'), vectorizer, logprobs)
-    max_thread = multiprocessing.cpu_count() - 1
+    max_thread = int(multiprocessing.cpu_count() * 0.7)
     num_trial = 5
     num_iter = 50
     if dataset_name == '20news':
