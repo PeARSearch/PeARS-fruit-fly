@@ -239,6 +239,27 @@ def crossover_v3(parent1, parent2):
 
     return lil_matrix(child1), lil_matrix(child2)
 
+def crossover_v4(parent1, parent2):
+    """
+    Crossover two genes. Return two new offsprings.
+    Split by column, then merge.
+    Requirement: two parents have the number of row, for that, matrix with highest number of rows 
+    is reduced by randomly picking its rows to be the same size of smallest matrix.
+    """
+
+    if parent1.shape[0]>parent2.shape[0]:
+      random_indices = np.random.choice(parent1.shape[0], size=int(parent2.shape[0]), replace=False)
+      parent1 = parent1[random_indices, :]
+    else:
+      random_indices = np.random.choice(parent2.shape[0], size=int(parent1.shape[0]), replace=False)
+      parent2 = parent2[random_indices, :]
+    
+    col_idx=int(parent1.shape[1]/2)
+    child1=hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
+    child2=hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
+
+    return lil_matrix(child1), lil_matrix(child2)
+
 
 def mutate(chrom):
     """
