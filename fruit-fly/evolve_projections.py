@@ -20,6 +20,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import csr_matrix, vstack, hstack, lil_matrix
 from docopt import docopt
 import time
+import utils
 
 from hyperparam_search import read_n_encode_dataset
 from classify import train_model
@@ -107,7 +108,8 @@ def fitness(weight_mat, prev_fitness):
     """
     Measure the fitness of one projection
     """
-    kc_score = 1 / np.log10(weight_mat.shape[0])
+    kc_size = weight_mat.shape[0]
+    kc_score = 1 / np.log10(kc_size)
     if prev_fitness != -1:
         val_score = prev_fitness - kc_score
         return prev_fitness, val_score, kc_score
@@ -123,7 +125,7 @@ def fitness(weight_mat, prev_fitness):
 
     # print(kc_size)
     fitness_score = val_score + kc_score
-    return fitness_score, val_score, kc_score
+    return fitness_score, val_score, kc_score, kc_size
     # return weight_mat.count_nonzero()
 
 
@@ -359,6 +361,7 @@ def genetic_alg():
     avg_fitness_list, stat_list = [], []
     stat_list.append(get_stats(population))
     for g in range(MAX_GENERATION):
+        dic={}
         start_time = time.time()
         # new generation, including selection, crossover, mutation
         if g > 0:  # do not process this step in the 1st generation, since every fitness = -1
@@ -369,6 +372,12 @@ def genetic_alg():
         fitness_list = [i[0] for i in fitness_tuple]
         val_score_list = [i[1] for i in fitness_tuple]
         kc_score_list = [i[2] for i in fitness_tuple]
+        kc_size_list= [i[3] for i in fitness_tuple]
+        dic['fitness_score']= fitness_list
+        dic['val_score']=val_score_list
+        dic['kc_score']=kc_score_list
+        dic['kc_number']=kc_size_list
+        utils.append_as_json(dic, './models/evolution/generations.json')
 
         # find the solution
         temp_sol, temp_fit = get_best(population, fitness_list)
