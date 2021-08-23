@@ -186,6 +186,24 @@ def elitist_selection(fitness_list):
                 selected.add(second_cand)
     return list(selected)
 
+def roulette_wheel_selection(fitness_list):
+  
+    """
+    Roulette wheel selection.
+    Return the index of genes that has been selected. 
+    """
+    running_total = []
+    sum_ = 0
+
+    for i in range(len(fitness_list)):
+        running_total.append(sum_ + fitness_list[i])
+        sum_ = running_total[i]
+
+    random_num = np.random.uniform(0, running_total[-1], round(SELECT_PERCENT * POP_SIZE))
+    selected = [np.argmin(running_total < i) for i in random_num]
+
+    return selected
+
 
 def crossover(parent1, parent2):
     """
