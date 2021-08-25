@@ -265,7 +265,6 @@ def stochastic_universal_sampling_selection(fitness_list):
         for fitness_scale_position in range(last_fitness_scale_position, len(fitness_scale)):
             if fitness_scale[fitness_scale_position] >= current_fitness_pointer:
                 selected.append(fitness_scale_position)
-                print(fitness_scale_position)
                 last_fitness_scale_position = fitness_scale_position
                 break
         current_fitness_pointer += fitness_step
