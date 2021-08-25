@@ -411,6 +411,7 @@ def mutate_list(chrom_list):
     Takes as input a list with a matrix in position 0 and a vector in position 1. 
     Return a list with a mutated matrix in position 0 and a mutated vector in position 1.
     """
+    MUTATE_PROB_VEC=2/chrom.shape[0]
     mutated_chrom=[]
     for chrom in chrom_list:
       if chrom.ndim>1:
@@ -432,7 +433,7 @@ def mutate_list(chrom_list):
         mutated_chrom.append(chrom)
       else:
         for i in range(chrom.shape[0]):
-          if np.random.random() < 2/chrom.shape[0]: #MUTATE_PROB_VEC (we can also set this as a hyperpameter)
+          if np.random.random() < MUTATE_PROB_VEC: # we can also set this as a hyperpameter
             print(i, chrom[i])
             if chrom[i]==0:
               chrom[i]=1
