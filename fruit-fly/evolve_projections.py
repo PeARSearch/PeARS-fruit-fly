@@ -21,6 +21,7 @@ from scipy.sparse import csr_matrix, vstack, hstack, lil_matrix
 from docopt import docopt
 import time
 import utils
+import scipy.stats as ss
 
 from hyperparam_search import read_n_encode_dataset
 from classify import train_model
@@ -140,7 +141,7 @@ def validate(population, fitness_list):
     return new_fitness_list
 
 
-def select(fitness_list):
+def tournament_selection(fitness_list):
     """
     Tournament selection.
     Return the index of genes that has been selected.
@@ -203,6 +204,30 @@ def roulette_wheel_selection(fitness_list):
     selected = [np.argmin(running_total < i) for i in random_num]
 
     return selected
+
+
+def roulette_wheel_selection_updated(fitness_list): 
+    num_select = round(SELECT_PERCENT * POP_SIZE)
+    s=sum(fitness_list)
+    weights = []
+    for i in range(len(fitness_list)) :
+        weights.append(fitness_list[i]/s)
+
+    random_num=np.random.choice(fitness_list,size=num_select,p=weights)
+    return len([fitness_list.index(i) for i in random_num])
+
+
+def rank_selection(fitness_list):
+    num_select = round(SELECT_PERCENT * POP_SIZE)
+    len_rank = len(fitness_list)
+    rank_sum = len_rank * (len_rank + 1) / 2
+
+    ranks=ss.rankdata(fitness_list)
+    for i, rank in enumerate(ranks):
+      ranks[i]= int(rank) / rank_sum
+
+    random_num=np.random.choice(fitness_list,size=num_select,p=ranks)
+    return [fitness_list.index(i) for i in random_num]
 
 
 def crossover(parent1, parent2):
