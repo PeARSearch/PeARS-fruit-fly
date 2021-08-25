@@ -144,7 +144,7 @@ def validate(population, fitness_list):
 def tournament_selection(fitness_list):
     """
     Tournament selection.
-    Return the index of genes that has been selected.
+    Return the index of chromosomes that have been selected.
     """
     selected = []
     num_select = round(SELECT_PERCENT * POP_SIZE)
@@ -162,7 +162,7 @@ def tournament_selection(fitness_list):
 def elitist_selection(fitness_list):
     """
     Tournament selection + elitist selection
-    Return the index of genes that has been selected.
+    Return the index of chromosomes that have been selected.
     """
     selected = set()
     num_select = round(SELECT_PERCENT * POP_SIZE)
@@ -191,7 +191,7 @@ def roulette_wheel_selection(fitness_list):
   
     """
     Roulette wheel selection.
-    Return the index of genes that has been selected. 
+    Return the index of chromosomes that have been selected. 
     """
     running_total = []
     sum_ = 0
@@ -207,6 +207,10 @@ def roulette_wheel_selection(fitness_list):
 
 
 def roulette_wheel_selection_updated(fitness_list): 
+    '''
+    New roulette wheel selection function. 
+    Returns the index of the chromosomes that have been selected.
+    '''
     num_select = round(SELECT_PERCENT * POP_SIZE)
     s=sum(fitness_list)
     weights = []
@@ -218,6 +222,11 @@ def roulette_wheel_selection_updated(fitness_list):
 
 
 def rank_selection(fitness_list):
+    '''
+    Similar method to the roulette wheel selection, the difference is that the probability
+    is calculated according to the rank of the fitness values. 
+    Returns the index of chromosomes that have been selected.
+    '''
     num_select = round(SELECT_PERCENT * POP_SIZE)
     len_rank = len(fitness_list)
     rank_sum = len_rank * (len_rank + 1) / 2
@@ -228,6 +237,39 @@ def rank_selection(fitness_list):
 
     random_num=np.random.choice(fitness_list,size=num_select,p=ranks)
     return [fitness_list.index(i) for i in random_num]
+
+
+def stochastic_universal_sampling_selection(fitness_list):
+    '''
+    "SUS uses a single random value to sample all of the solutions by choosing 
+    them at evenly spaced intervals."
+    Returns the index of chromosomes that have been selected.
+    '''
+    total_fitness = 0
+    fitness_scale = []
+    for index, individual in enumerate(fitness_list):
+        total_fitness += individual
+        if index == 0:
+            fitness_scale.append(individual)
+        else:
+            fitness_scale.append(individual + fitness_scale[index - 1])
+        
+    selected = []
+    num_select=round(SELECT_PERCENT * POP_SIZE)
+    fitness_step = total_fitness / num_select
+    random_offset = np.random.uniform(0, fitness_step)
+
+    current_fitness_pointer = random_offset
+    last_fitness_scale_position = 0
+    for index in range(len(fitness_list)):
+        for fitness_scale_position in range(last_fitness_scale_position, len(fitness_scale)):
+            if fitness_scale[fitness_scale_position] >= current_fitness_pointer:
+                selected.append(fitness_list[fitness_scale_position])
+                last_fitness_scale_position = fitness_scale_position
+                break
+        current_fitness_pointer += fitness_step
+    
+    return [fitness_list.index(i) for i in selected]
 
 
 def crossover(parent1, parent2):
