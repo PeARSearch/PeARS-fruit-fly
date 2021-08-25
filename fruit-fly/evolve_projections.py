@@ -347,9 +347,42 @@ def crossover_v4(parent1, parent2):
 
     return lil_matrix(child1), lil_matrix(child2)
 
+def crossover_v4_list(parent1_list, parent2_list):
+    """
+    Crossover two genes. 
+    Input is a list containing one matrix in position 0 and a vector in position 1
+    Return two new offsprings which is a list with a matrix in position 0 and a vector in position 1.
+    """
+    child1_list=[]
+    child2_list=[]
+    for parent1, parent2 in zip(parent1_list, parent2_list):
+      if parent1.ndim > 1:
+        if parent1.shape[0]>parent2.shape[0]:
+          random_indices = np.random.choice(parent1.shape[0], size=int(parent2.shape[0]), replace=False)
+          parent1 = parent1[random_indices, :]
+        else:
+          random_indices = np.random.choice(parent2.shape[0], size=int(parent1.shape[0]), replace=False)
+          parent2 = parent2[random_indices, :]
+
+        col_idx=int(parent1.shape[1]/2)
+        child1=hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
+        child2=hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
+        child1_list.append(child1)
+        child2_list.append(child2)
+      else:
+        col_idx=int(parent1.shape[0]/2)
+        child1=np.concatenate([parent1[:col_idx], parent2[col_idx:]])
+        child2=np.concatenate([parent1[col_idx:], parent2[:col_idx]])
+        child1_list.append(child1)
+        child2_list.append(child2)
+
+    return child1_list, child2_list
+
 
 def mutate(chrom):
     """
+    Modifies the chromosome by flipping the bit of indexes that 
+    have probability lower that mutation rate. 
      (Decide on the best number of random indices for flipping the bit.)
     """
     row_col=set()
@@ -371,27 +404,43 @@ def mutate(chrom):
     return chrom
 
 
-def mutate_v1(chrom):
+def mutate_list(chrom_list):
     """
-     (Decide on the best number of random indices for flipping the bit.)
+    Modifies the chromosome by flipping the bit of indexes that 
+    have probability lower that mutation rate. 
+    Takes as input a list with a matrix in position 0 and a vector in position 1. 
+    Return a list with a mutated matrix in position 0 and a mutated vector in position 1.
     """
-    row_col=set()
-    for i in range(int(MUTATE_PROB * chrom.shape[0] * chrom.shape[1])):  #or: int(MUTATE_PROB * chrom.count_nonzero())
-        if np.random.random() < MUTATE_PROB:
+    mutated_chrom=[]
+    for chrom in chrom_list:
+      if chrom.ndim>1:
+        row_col=set()
+        for i in range(int(MUTATE_PROB * chrom.shape[0] * chrom.shape[1])):   #or: int(MUTATE_PROB * chrom.count_nonzero())
+          if np.random.random() < MUTATE_PROB:
             row = np.random.choice(chrom.shape[0])
             col = np.random.choice(chrom.shape[1])
-
+            
             while (row, col) in row_col:    #avoid repetition of indexes in the matrix
-                row = np.random.choice(chrom.shape[0])
-                col = np.random.choice(chrom.shape[1])
-
+              row = np.random.choice(chrom.shape[0])
+              col = np.random.choice(chrom.shape[1])
+            
             row_col.add((row, col))
             if chrom[row, col]==0:
-                chrom[row, col]=1
+              chrom[row, col]=1
             else:
-                chrom[row, col]=0
+              chrom[row, col]=0
+        mutated_chrom.append(chrom)
+      else:
+        for i in range(chrom.shape[0]):
+          if np.random.random() < 2/chrom.shape[0]: #MUTATE_PROB_VEC (we can also set this as a hyperpameter)
+            print(i, chrom[i])
+            if chrom[i]==0:
+              chrom[i]=1
+            else:
+              chrom[i]=0
+        mutated_chrom.append(chrom)
 
-    return chrom
+    return mutated_chrom
 
 
 def evolve(population, fitness_list):
