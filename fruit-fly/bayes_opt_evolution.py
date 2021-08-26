@@ -1,14 +1,6 @@
-"""Genetic Algorithm for fruit-fly projection
-Usage:
-  evolve_projection.py --train_path=<filename>
-  evolve_projection.py (-h | --help)
-  evolve_projection.py --version
-Options:
-  -h --help                       Show this screen.
-  --version                       Show version.
-  --train_path=<filename>         Name of file to train (processed by sentencepeice)
-"""
-
+from bayes_opt import BayesianOptimization
+import evolve_projections
+import utils
 
 import numpy as np
 import joblib
@@ -141,25 +133,7 @@ def validate(population, fitness_list):
     return new_fitness_list
 
 
-def tournament_selection(fitness_list):
-    """
-    Tournament selection.
-    Return the index of chromosomes that have been selected.
-    """
-    selected = []
-    num_select = round(SELECT_PERCENT * POP_SIZE)
-    if num_select < 2:
-        num_select = 2  # mother, father
-    for i in range(num_select):
-        first_cand, second_cand = np.random.choice(range(POP_SIZE), 2)
-        if fitness_list[first_cand] > fitness_list[second_cand]:
-            selected.append(first_cand)
-        else:
-            selected.append(second_cand)
-    return selected
-
-
-def elitist_selection(fitness_list):
+def elitist_selection(fitness_list, ELITE_CHROMS, SELECT_PERCENT, POP_SIZE):
     """
     Tournament selection + elitist selection
     Return the index of chromosomes that have been selected.
@@ -187,165 +161,6 @@ def elitist_selection(fitness_list):
                 selected.add(second_cand)
     return list(selected)
 
-def roulette_wheel_selection(fitness_list):
-  
-    """
-    Roulette wheel selection.
-    Return the index of chromosomes that have been selected. 
-    """
-    running_total = []
-    sum_ = 0
-
-    for i in range(len(fitness_list)):
-        running_total.append(sum_ + fitness_list[i])
-        sum_ = running_total[i]
-
-    random_num = np.random.uniform(0, running_total[-1], round(SELECT_PERCENT * POP_SIZE))
-    selected = [np.argmin(running_total < i) for i in random_num]
-
-    return selected
-
-
-def roulette_wheel_selection_updated(fitness_list): 
-    '''
-    New roulette wheel selection function. 
-    Returns the index of the chromosomes that have been selected.
-    '''
-    num_select = round(SELECT_PERCENT * POP_SIZE)
-    s=sum(fitness_list)
-    weights = []
-    for i in range(len(fitness_list)) :
-        weights.append(fitness_list[i]/s)
-
-    random_num=np.random.choice(fitness_list,size=num_select,p=weights)
-    return len([fitness_list.index(i) for i in random_num])
-
-
-def rank_selection(fitness_list):
-    '''
-    Similar method to the roulette wheel selection, the difference is that the probability
-    is calculated according to the rank of the fitness values. 
-    Returns the index of chromosomes that have been selected.
-    '''
-    num_select = round(SELECT_PERCENT * POP_SIZE)
-    len_rank = len(fitness_list)
-    rank_sum = len_rank * (len_rank + 1) / 2
-
-    ranks=ss.rankdata(fitness_list)
-    for i, rank in enumerate(ranks):
-      ranks[i]= int(rank) / rank_sum
-
-    random_num=np.random.choice(fitness_list,size=num_select,p=ranks)
-    return [fitness_list.index(i) for i in random_num]
-
-
-def stochastic_universal_sampling_selection(fitness_list):
-    '''
-    "SUS uses a single random value to sample all of the solutions by choosing 
-    them at evenly spaced intervals."
-    Returns the index of chromosomes that have been selected.
-    '''
-    total_fitness = 0
-    fitness_scale = []
-    for index, individual in enumerate(fitness_list):
-        total_fitness += individual
-        if index == 0:
-            fitness_scale.append(individual)
-        else:
-            fitness_scale.append(individual + fitness_scale[index - 1])
-        
-    selected = []
-    num_select=round(SELECT_PERCENT * POP_SIZE)
-    fitness_step = total_fitness / num_select
-    random_offset = np.random.uniform(0, fitness_step)
-
-    current_fitness_pointer = random_offset
-    last_fitness_scale_position = 0
-    for index in range(len(fitness_list)):
-        for fitness_scale_position in range(last_fitness_scale_position, len(fitness_scale)):
-            if fitness_scale[fitness_scale_position] >= current_fitness_pointer:
-                selected.append(fitness_scale_position)
-                last_fitness_scale_position = fitness_scale_position
-                break
-        current_fitness_pointer += fitness_step
-    
-    return selected
-
-
-def crossover(parent1, parent2):
-    """
-    Crossover two genes. Return two new offsprings.
-    split by column, then merge
-    requirement: two parents have the number of row
-    """
-    col_idx=int(parent1.shape[1]/2)
-    child1=hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
-    child2=hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
-
-    return lil_matrix(child1), lil_matrix(child2)
-
-
-def crossover_v1(parent1, parent2):
-    """
-    split by row, then merge
-    requirement: two parents have the number of row
-    """
-    row_idx=int(parent1.shape[0]/2)
-    child1=hstack([parent1[:row_idx, :], parent2[row_idx:, :]])
-    child2=hstack([parent1[row_idx:, :], parent2[:row_idx, :]])
-
-    return lil_matrix(child1), lil_matrix(child2)
-
-
-def crossover_v2(parent1, parent2):
-    """
-    split by column
-    truncate the parent with more number of row to be the same as the other parent
-    """
-    row_idx = min(parent1.shape[0], parent2.shape[0])
-    # or combine the two matrices by row, then split
-    col_idx = parent1.shape[1] // 2
-    child1 = hstack([parent1[:row_idx, :col_idx], parent2[:row_idx, col_idx:]])
-    child2 = hstack([parent1[:row_idx, col_idx:], parent2[:row_idx, :col_idx]])
-
-    return lil_matrix(child1), lil_matrix(child2)
-
-
-def crossover_v3(parent1, parent2):
-    """
-    merge by row first, then spilt by row equally, then split by column
-    """
-    row_idx = (parent1.shape[0] + parent2.shape[0]) // 2
-    merge_parent = lil_matrix(vstack([parent1, parent2]))
-    parent1 = merge_parent[:row_idx, :]
-    parent2 = merge_parent[row_idx:row_idx*2, :]
-    # or combine the two matrices by row, then split
-    col_idx = parent1.shape[1] // 2
-    child1 = hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
-    child2 = hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
-
-    return lil_matrix(child1), lil_matrix(child2)
-
-def crossover_v4(parent1, parent2):
-    """
-    Crossover two genes. Return two new offsprings.
-    Split by column, then merge.
-    Requirement: two parents have the number of row, for that, matrix with highest number of rows 
-    is reduced by randomly picking its rows to be the same size of smallest matrix.
-    """
-
-    if parent1.shape[0]>parent2.shape[0]:
-      random_indices = np.random.choice(parent1.shape[0], size=int(parent2.shape[0]), replace=False)
-      parent1 = parent1[random_indices, :]
-    else:
-      random_indices = np.random.choice(parent2.shape[0], size=int(parent1.shape[0]), replace=False)
-      parent2 = parent2[random_indices, :]
-    
-    col_idx=int(parent1.shape[1]/2)
-    child1=hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
-    child2=hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
-
-    return lil_matrix(child1), lil_matrix(child2)
 
 def crossover_v4_list(parent1_list, parent2_list):
     """
@@ -379,32 +194,7 @@ def crossover_v4_list(parent1_list, parent2_list):
     return child1_list, child2_list
 
 
-def mutate(chrom):
-    """
-    Modifies the chromosome by flipping the bit of indexes that 
-    have probability lower that mutation rate. 
-     (Decide on the best number of random indices for flipping the bit.)
-    """
-    row_col=set()
-    for i in range(int(MUTATE_PROB * chrom.shape[0] * chrom.shape[1])):   #or: int(MUTATE_PROB * chrom.count_nonzero())
-        if np.random.random() < MUTATE_PROB:
-            row = np.random.choice(chrom.shape[0])
-            col = np.random.choice(chrom.shape[1])
-
-            while (row, col) in row_col:    #avoid repetition of indexes in the matrix
-                row = np.random.choice(chrom.shape[0])
-                col = np.random.choice(chrom.shape[1])
-
-            row_col.add((row, col))
-            if chrom[row, col]==0:
-                chrom[row, col]=1
-            else:
-                chrom[row, col]=0
-
-    return chrom
-
-
-def mutate_list(chrom_list):
+def mutate_list(chrom_list, MUTATE_PROB, MUTATE_PROB_VEC):
     """
     Modifies the chromosome by flipping the bit of indexes that 
     have probability lower that mutation rate. 
@@ -432,7 +222,7 @@ def mutate_list(chrom_list):
         mutated_chrom.append(chrom)
       else:
         for i in range(chrom.shape[0]):
-          if np.random.random() < MUTATE_PROB_VEC: # we can also set this as a hyperpameter
+          if np.random.random() < MUTATE_PROB_VEC: # a hyperpameter
             print(i, chrom[i])
             if chrom[i]==0:
               chrom[i]=1
@@ -443,7 +233,8 @@ def mutate_list(chrom_list):
     return mutated_chrom
 
 
-def evolve(population, fitness_list):
+def evolve(population, fitness_list, ELITE_CHROMS, SELECT_PERCENT, POP_SIZE, 
+				CROSSOVER_PROB, MUTATE_PROB, MUTATE_PROB_VEC):
     """
     Create next generation by selecting, crossing-over and mutating.
     """
@@ -451,7 +242,7 @@ def evolve(population, fitness_list):
 
     for i in range(len(population) // 2):
         # selection
-        selected = elitist_selection(fitness_list)
+        selected = elitist_selection(fitness_list, ELITE_CHROMS, SELECT_PERCENT, POP_SIZE)
         mother_choice = np.random.choice(selected)
         selected.remove(mother_choice)
         father_choice = np.random.choice(selected)
@@ -460,7 +251,7 @@ def evolve(population, fitness_list):
 
         # crossover
         if np.random.random() < CROSSOVER_PROB:
-            child1, child2 = crossover_v3(mother, father)
+            child1, child2 = crossover_v4_list(mother, father)
             new_fitness_list.append(-1)
             new_fitness_list.append(-1)
         else:
@@ -470,8 +261,8 @@ def evolve(population, fitness_list):
             new_fitness_list.append(fitness_list[father_choice])
 
         # mutation
-        child1 = mutate(child1)
-        child2 = mutate(child2)
+        child1 = mutate_list(child1, MUTATE_PROB, MUTATE_PROB_VEC)
+        child2 = mutate_list(child2, MUTATE_PROB, MUTATE_PROB_VEC)
 
         new_population.append(child1)
         new_population.append(child2)
@@ -479,11 +270,14 @@ def evolve(population, fitness_list):
     return new_population, new_fitness_list
 
 
-def genetic_alg():
+def genetic_alg(POP_SIZE, CROSSOVER_PROB, SELECT_PERCENT, MUTATE_PROB, MUTATE_PROB_VEC, ELITE_CHROMS):
     """
     Genetic Algorithms, main function.
     """
     # generate the first random population
+
+    MAX_GENERATION=4
+
     print(f'generate the first generation of {POP_SIZE} individuals')
     start_time = time.time()
     population, fitness_list = init_pop()
@@ -494,12 +288,14 @@ def genetic_alg():
     solution, max_fitness = get_best(population, fitness_list)
     avg_fitness_list, stat_list = [], []
     stat_list.append(get_stats(population))
+    total_improvement=[]
     for g in range(MAX_GENERATION):
         dic={}
         start_time = time.time()
         # new generation, including selection, crossover, mutation
         if g > 0:  # do not process this step in the 1st generation, since every fitness = -1
-            population, fitness_list = evolve(population, fitness_list)
+            population, fitness_list = evolve(population, fitness_list, ELITE_CHROMS, SELECT_PERCENT, 
+            				POP_SIZE, CROSSOVER_PROB, , MUTATE_PROB, MUTATE_PROB_VEC)
 
         # validate the population
         fitness_tuple = validate(population, fitness_list)
@@ -511,7 +307,7 @@ def genetic_alg():
         dic['val_score']=val_score_list
         dic['kc_score']=kc_score_list
         dic['kc_number']=kc_size_list
-        utils.append_as_json(dic, './models/evolution/generations.json')
+        utils.append_as_json(dic, './models/evolution/generations_bayes.json')
 
         # find the solution
         temp_sol, temp_fit = get_best(population, fitness_list)
@@ -521,6 +317,11 @@ def genetic_alg():
 
         # print progress
         avg_fitness = sum(fitness_list) / POP_SIZE
+        if not last_fitness:
+        	last_fitness=avg_fitness
+        improvement_fitness=avg_fitness-last_fitness
+        last_fitness=avg_fitness
+        total_improvement.append(improvement_fitness)
         avg_fitness_list.append(avg_fitness)
         stat_list.append(get_stats(population))
         print('gen {}, avg fitness {}, avg val {}, stats {}, time {}'.format(
@@ -536,58 +337,41 @@ def genetic_alg():
         with open('./models/evolution/stat_list', "wb") as f:
             pickle.dump(stat_list, f)
 
-    return solution, max_fitness, avg_fitness_list, stat_list
+    return sum(total_improvement)
 
 
-if __name__ == '__main__':
-    args = docopt(__doc__, version='Genetic Algorithm for fruit-fly projection, ver 0.1')
-    train_path = args["--train_path"]
-    dataset_name = train_path.split('/')[2].split('-')[0]
-    print('Dataset name:', dataset_name)
-    pathlib.Path(f'./models/evolution/{dataset_name}').mkdir(parents=True, exist_ok=True)
-
-    # global
-    POP_SIZE = 1000  # hyperparam (400 - 2000)
+def bayesian_optimization(NUM_PROJ, PN_SIZE, WTA_DIM):
+  def evolve_bayes(POP_SIZE, SELECT_PERCENT, CROSSOVER_PROB, ELITE_CHROMS, MUTATE_PROB, MUTATE_PROB_VEC):
+  	POP_SIZE = int(POP_SIZE) 
     if POP_SIZE % 2:  # the pop size should be even
         POP_SIZE -= 1  # otherwise after the 1st generation it will decrease by 1
-    MAX_GENERATION = 20  # 4
-    SELECT_PERCENT = 0.2  # hyperparam (0.1 - 0.9)
-    CROSSOVER_PROB = 0.7  # hyperparam (0.3 - 0.8)
-    ELITE_CHROMS = 2  # hyperparam (2 - 10)
+    MUTATE_PROB = NUM_PROJ / PN_SIZE * MUTATE_PROB
+    MUTATE_PROB_VEC = MUTATE_PROB_VEC/WTA_DIM.shape[0]
+    ELITE_CHROMS = int(ELITE_CHROMS)
 
-    # KC_SIZE = 8834
-    MIN_KC, MAX_KC = 1000, 10000
-    # MIN_PROJ, MAX_PROJ = 2, 10
-    NUM_PROJ = 10
-    WTA_DIM =  # to be set
-    top_word = 242
-    percent_hash = 15
-    C = 93
-    num_iter = 50
-    if dataset_name == '20news':
-        num_iter = 2000
+    return genetic_alg(POP_SIZE, CROSSOVER_PROB, SELECT_PERCENT, MUTATE_PROB, 
+    					MUTATE_PROB_VEC, ELITE_CHROMS)
 
-    max_thread = int(multiprocessing.cpu_count() * 0.7)
+  optimizer = BayesianOptimization(
+      f=evolve_bayes,
+      pbounds={"POP_SIZE": (400, 2000), 'SELECT_PERCENT': (0.1, 0.9), 
+      			'CROSSOVER_PROB':(0.3, 0.8), 'ELITE_CHROMS': (2, 10), 
+      			'MUTATE_PROB':(0.2, 0.8), 'MUTATE_PROB_VEC':(0.5, 2)},
+      random_state=123,
+      verbose=2
+  )
 
-    sp = spm.SentencePieceProcessor()
-    sp.load('../spmcc.model')
-    vocab, reverse_vocab, logprobs = read_vocab()
-    vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
-    train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs)
-    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs)
+  optimizer.maximize(n_iter=100)
+  dic = {}
+  dic['pop_size']=int(optimizer.max['params']['POP_SIZE'])
+  dic['select_percent']=optimizer.max['params']['SELECT_PERCENT']
+  dic['cross_prob'] = optimizer.max['params']['CROSSOVER_PROB']
+  dic['elite_chroms'] = int(optimizer.max['params']['ELITE_CHROMS'])
+  dic['mutate_prob'] = optimizer.max['params']['MUTATE_PROB']
+  dic['mutate_prob_vec'] = optimizer.max['params']['MUTATE_PROB_VEC']
 
-    PN_SIZE = train_set.shape[1]
-    MUTATE_PROB = NUM_PROJ / PN_SIZE * 0.8  # 0.8 is a hyperparam
-    MUTATE_PROB_VEC=2/WTA_DIM.shape[0]  #2 is a hyperparam
+  print("Final result:", optimizer.max)
+  utils.append_as_json(dic, "./models/evolution/bayes_results.json")
 
-    # main
-    best_solution, best_fitness, avg_fitness_list, stat_list = genetic_alg()
-    print('MAX FITNESS', best_fitness)
-    with open('./models/evolution/best_solution', "wb") as f:
-        pickle.dump(best_solution, f)
-    with open('./models/evolution/best_fitness', "wb") as f:
-        pickle.dump(best_fitness, f)
-    with open('./models/evolution/avg_fitness_list', "wb") as f:
-        pickle.dump(avg_fitness_list, f)
-    with open('./models/evolution/stat_list', "wb") as f:
-        pickle.dump(stat_list, f)
+
+bayesian_optimization(NUM_PROJ, PN_SIZE, WTA_DIM)
