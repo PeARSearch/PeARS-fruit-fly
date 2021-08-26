@@ -1,7 +1,16 @@
-from bayes_opt import BayesianOptimization
-import evolve_projections
-import utils
+"""Genetic Algorithm for fruit-fly projection
+Usage:
+  bayes_opt_evolution.py --train_path=<filename>
+  bayes_opt_evolution.py (-h | --help)
+  bayes_opt_evolution.py --version
+Options:
+  -h --help                       Show this screen.
+  --version                       Show version.
+  --train_path=<filename>         Name of file to train (processed by sentencepeice)
+"""
 
+from bayes_opt import BayesianOptimization
+import utils
 import numpy as np
 import joblib
 import pathlib
@@ -12,7 +21,6 @@ from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import csr_matrix, vstack, hstack, lil_matrix
 from docopt import docopt
 import time
-import utils
 import scipy.stats as ss
 
 from hyperparam_search import read_n_encode_dataset
@@ -289,6 +297,7 @@ def genetic_alg(POP_SIZE, CROSSOVER_PROB, SELECT_PERCENT, MUTATE_PROB, MUTATE_PR
     avg_fitness_list, stat_list = [], []
     stat_list.append(get_stats(population))
     total_improvement=[]
+    last_fitness=0
     for g in range(MAX_GENERATION):
         dic={}
         start_time = time.time()
@@ -317,7 +326,7 @@ def genetic_alg(POP_SIZE, CROSSOVER_PROB, SELECT_PERCENT, MUTATE_PROB, MUTATE_PR
 
         # print progress
         avg_fitness = sum(fitness_list) / POP_SIZE
-        if not last_fitness:
+        if last_fitness == 0:
         	last_fitness=avg_fitness
         improvement_fitness=avg_fitness-last_fitness
         last_fitness=avg_fitness
@@ -374,4 +383,34 @@ def bayesian_optimization(NUM_PROJ, PN_SIZE, WTA_DIM):
   utils.append_as_json(dic, "./models/evolution/bayes_results.json")
 
 
-bayesian_optimization(NUM_PROJ, PN_SIZE, WTA_DIM)
+if __name__ == '__main__':
+    args = docopt(__doc__, version='Bayesian Optimization for the Genetic Algorithm of the fruit-fly projection, ver 0.1')
+    train_path = args["--train_path"]
+    dataset_name = train_path.split('/')[2].split('-')[0]
+    print('Dataset name:', dataset_name)
+    pathlib.Path(f'./models/evolution/{dataset_name}').mkdir(parents=True, exist_ok=True)
+
+    # KC_SIZE = 8834
+    MIN_KC, MAX_KC = 1000, 10000
+    # MIN_PROJ, MAX_PROJ = 2, 10
+    NUM_PROJ = 10
+    WTA_DIM =  # to be set
+    top_word = 242
+    percent_hash = 15
+    C = 93
+    num_iter = 50
+    if dataset_name == '20news':
+        num_iter = 2000
+
+    max_thread = int(multiprocessing.cpu_count() * 0.7)
+
+    sp = spm.SentencePieceProcessor()
+    sp.load('../spmcc.model')
+    vocab, reverse_vocab, logprobs = read_vocab()
+    vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
+    train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs)
+    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs)
+
+    PN_SIZE = train_set.shape[1]
+
+	bayesian_optimization(NUM_PROJ, PN_SIZE, WTA_DIM)
