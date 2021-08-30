@@ -1,3 +1,4 @@
+
 """Genetic Algorithm for fruit-fly projection
 Usage:
   evolve_projection.py --train_path=<filename>
@@ -33,7 +34,7 @@ def generate_proj():
     """
     Generate a random projection
     """
-    kc_size = 4000# np.random.randint(low=MIN_KC, high=MAX_KC)
+    kc_size = np.random.randint(low=MIN_KC, high=MAX_KC)
     weight_mat = np.zeros((kc_size, PN_SIZE))
     for i in range(kc_size):
         # size_ = np.random.randint(low=2, high=10, size=1)[0]
@@ -112,21 +113,24 @@ def fitness(weight_mat, prev_fitness):
     kc_size = weight_mat.shape[0]
     kc_score = 1 / np.log10(kc_size)
     if prev_fitness != -1:
-        val_score = prev_fitness - kc_score
-        return prev_fitness, val_score, kc_score
+        sum_val_score = prev_fitness - kc_score
+        return prev_fitness, sum_val_score, kc_score, kc_size
 
-    hash_train = hash_dataset_(dataset_mat=train_set, weight_mat=weight_mat,
-                               percent_hash=percent_hash, top_words=top_word)
-    hash_val = hash_dataset_(dataset_mat=val_set, weight_mat=weight_mat,
-                             percent_hash=percent_hash, top_words=top_word)
-    # print('training and evaluating')
-    val_score, _ = train_model(m_train=hash_train, classes_train=train_label,
-                               m_val=hash_val, classes_val=val_label,
-                               C=C, num_iter=num_iter)
+    val_score_list = []
+    for i in range(len(train_set_list)):
+        hash_train = hash_dataset_(dataset_mat=train_set_list[i], weight_mat=weight_mat,
+                                   percent_hash=percent_hash, top_words=top_word)
+        hash_val = hash_dataset_(dataset_mat=val_set_list[i], weight_mat=weight_mat,
+                                 percent_hash=percent_hash, top_words=top_word)
+        # print('training and evaluating')
+        val_score, _ = train_model(m_train=hash_train, classes_train=train_label_list[i],
+                                   m_val=hash_val, classes_val=val_label_list[i],
+                                   C=C, num_iter=num_iter)
+        val_score_list.append(val_score)
 
     # print(kc_size)
-    fitness_score = val_score + kc_score
-    return fitness_score, val_score, kc_score, kc_size
+    fitness_score = np.sum(val_score_list) + kc_score
+    return fitness_score, np.sum(val_score_list), kc_score, kc_size
     # return weight_mat.count_nonzero()
 
 
@@ -141,10 +145,10 @@ def validate(population, fitness_list):
     return new_fitness_list
 
 
-def tournament_selection(fitness_list):
+def select(fitness_list):
     """
     Tournament selection.
-    Return the index of chromosomes that have been selected.
+    Return the index of genes that has been selected.
     """
     selected = []
     num_select = round(SELECT_PERCENT * POP_SIZE)
@@ -162,7 +166,7 @@ def tournament_selection(fitness_list):
 def elitist_selection(fitness_list):
     """
     Tournament selection + elitist selection
-    Return the index of chromosomes that have been selected.
+    Return the index of genes that has been selected.
     """
     selected = set()
     num_select = round(SELECT_PERCENT * POP_SIZE)
@@ -187,28 +191,10 @@ def elitist_selection(fitness_list):
                 selected.add(second_cand)
     return list(selected)
 
-def roulette_wheel_selection(fitness_list):
-  
-    """
-    Roulette wheel selection.
-    Return the index of chromosomes that have been selected. 
-    """
-    running_total = []
-    sum_ = 0
 
-    for i in range(len(fitness_list)):
-        running_total.append(sum_ + fitness_list[i])
-        sum_ = running_total[i]
-
-    random_num = np.random.uniform(0, running_total[-1], round(SELECT_PERCENT * POP_SIZE))
-    selected = [np.argmin(running_total < i) for i in random_num]
-
-    return selected
-
-
-def roulette_wheel_selection_updated(fitness_list): 
+def roulette_wheel_selection_updated(fitness_list):
     '''
-    New roulette wheel selection function. 
+    New roulette wheel selection function.
     Returns the index of the chromosomes that have been selected.
     '''
     num_select = round(SELECT_PERCENT * POP_SIZE)
@@ -224,7 +210,7 @@ def roulette_wheel_selection_updated(fitness_list):
 def rank_selection(fitness_list):
     '''
     Similar method to the roulette wheel selection, the difference is that the probability
-    is calculated according to the rank of the fitness values. 
+    is calculated according to the rank of the fitness values.
     Returns the index of chromosomes that have been selected.
     '''
     num_select = round(SELECT_PERCENT * POP_SIZE)
@@ -233,7 +219,7 @@ def rank_selection(fitness_list):
 
     ranks=ss.rankdata(fitness_list)
     for i, rank in enumerate(ranks):
-      ranks[i]= int(rank) / rank_sum
+        ranks[i]= int(rank) / rank_sum
 
     random_num=np.random.choice(fitness_list,size=num_select,p=ranks)
     return [fitness_list.index(i) for i in random_num]
@@ -241,7 +227,7 @@ def rank_selection(fitness_list):
 
 def stochastic_universal_sampling_selection(fitness_list):
     '''
-    "SUS uses a single random value to sample all of the solutions by choosing 
+    "SUS uses a single random value to sample all of the solutions by choosing
     them at evenly spaced intervals."
     Returns the index of chromosomes that have been selected.
     '''
@@ -253,7 +239,7 @@ def stochastic_universal_sampling_selection(fitness_list):
             fitness_scale.append(individual)
         else:
             fitness_scale.append(individual + fitness_scale[index - 1])
-        
+
     selected = []
     num_select=round(SELECT_PERCENT * POP_SIZE)
     fitness_step = total_fitness / num_select
@@ -268,7 +254,7 @@ def stochastic_universal_sampling_selection(fitness_list):
                 last_fitness_scale_position = fitness_scale_position
                 break
         current_fitness_pointer += fitness_step
-    
+
     return selected
 
 
@@ -326,6 +312,7 @@ def crossover_v3(parent1, parent2):
 
     return lil_matrix(child1), lil_matrix(child2)
 
+
 def crossover_v4(parent1, parent2):
     """
     Crossover two genes. Return two new offsprings.
@@ -335,54 +322,21 @@ def crossover_v4(parent1, parent2):
     """
 
     if parent1.shape[0]>parent2.shape[0]:
-      random_indices = np.random.choice(parent1.shape[0], size=int(parent2.shape[0]), replace=False)
-      parent1 = parent1[random_indices, :]
+        random_indices = np.random.choice(parent1.shape[0], size=int(parent2.shape[0]), replace=False)
+        parent1 = parent1[random_indices, :]
     else:
-      random_indices = np.random.choice(parent2.shape[0], size=int(parent1.shape[0]), replace=False)
-      parent2 = parent2[random_indices, :]
-    
+        random_indices = np.random.choice(parent2.shape[0], size=int(parent1.shape[0]), replace=False)
+        parent2 = parent2[random_indices, :]
+
     col_idx=int(parent1.shape[1]/2)
     child1=hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
     child2=hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
 
     return lil_matrix(child1), lil_matrix(child2)
 
-def crossover_v4_list(parent1_list, parent2_list):
-    """
-    Crossover two genes. 
-    Input is a list containing one matrix in position 0 and a vector in position 1
-    Return two new offsprings which is a list with a matrix in position 0 and a vector in position 1.
-    """
-    child1_list=[]
-    child2_list=[]
-    for parent1, parent2 in zip(parent1_list, parent2_list):
-      if parent1.ndim > 1:
-        if parent1.shape[0]>parent2.shape[0]:
-          random_indices = np.random.choice(parent1.shape[0], size=int(parent2.shape[0]), replace=False)
-          parent1 = parent1[random_indices, :]
-        else:
-          random_indices = np.random.choice(parent2.shape[0], size=int(parent1.shape[0]), replace=False)
-          parent2 = parent2[random_indices, :]
-
-        col_idx=int(parent1.shape[1]/2)
-        child1=hstack([parent1[:, :col_idx], parent2[:, col_idx:]])
-        child2=hstack([parent1[:, col_idx:], parent2[:, :col_idx]])
-        child1_list.append(child1)
-        child2_list.append(child2)
-      else:
-        col_idx=int(parent1.shape[0]/2)
-        child1=np.concatenate([parent1[:col_idx], parent2[col_idx:]])
-        child2=np.concatenate([parent1[col_idx:], parent2[:col_idx]])
-        child1_list.append(child1)
-        child2_list.append(child2)
-
-    return child1_list, child2_list
-
 
 def mutate(chrom):
     """
-    Modifies the chromosome by flipping the bit of indexes that 
-    have probability lower that mutation rate. 
      (Decide on the best number of random indices for flipping the bit.)
     """
     row_col=set()
@@ -404,45 +358,6 @@ def mutate(chrom):
     return chrom
 
 
-def mutate_list(chrom_list):
-    """
-    Modifies the chromosome by flipping the bit of indexes that 
-    have probability lower that mutation rate. 
-    Takes as input a list with a matrix in position 0 and a vector in position 1. 
-    Return a list with a mutated matrix in position 0 and a mutated vector in position 1.
-    """
-    mutated_chrom=[]
-    for chrom in chrom_list:
-      if chrom.ndim>1:
-        row_col=set()
-        for i in range(int(MUTATE_PROB * chrom.shape[0] * chrom.shape[1])):   #or: int(MUTATE_PROB * chrom.count_nonzero())
-          if np.random.random() < MUTATE_PROB:
-            row = np.random.choice(chrom.shape[0])
-            col = np.random.choice(chrom.shape[1])
-            
-            while (row, col) in row_col:    #avoid repetition of indexes in the matrix
-              row = np.random.choice(chrom.shape[0])
-              col = np.random.choice(chrom.shape[1])
-            
-            row_col.add((row, col))
-            if chrom[row, col]==0:
-              chrom[row, col]=1
-            else:
-              chrom[row, col]=0
-        mutated_chrom.append(chrom)
-      else:
-        for i in range(chrom.shape[0]):
-          if np.random.random() < MUTATE_PROB_VEC: # we can also set this as a hyperpameter
-            print(i, chrom[i])
-            if chrom[i]==0:
-              chrom[i]=1
-            else:
-              chrom[i]=0
-        mutated_chrom.append(chrom)
-
-    return mutated_chrom
-
-
 def evolve(population, fitness_list):
     """
     Create next generation by selecting, crossing-over and mutating.
@@ -451,7 +366,7 @@ def evolve(population, fitness_list):
 
     for i in range(len(population) // 2):
         # selection
-        selected = elitist_selection(fitness_list)
+        selected = rank_selection(fitness_list)
         mother_choice = np.random.choice(selected)
         selected.remove(mother_choice)
         father_choice = np.random.choice(selected)
@@ -460,7 +375,7 @@ def evolve(population, fitness_list):
 
         # crossover
         if np.random.random() < CROSSOVER_PROB:
-            child1, child2 = crossover_v3(mother, father)
+            child1, child2 = crossover_v4(mother, father)
             new_fitness_list.append(-1)
             new_fitness_list.append(-1)
         else:
@@ -547,10 +462,10 @@ if __name__ == '__main__':
     pathlib.Path(f'./models/evolution/{dataset_name}').mkdir(parents=True, exist_ok=True)
 
     # global
-    POP_SIZE = 1000  # hyperparam (400 - 2000)
+    POP_SIZE = 400  # hyperparam (400 - 2000)
     if POP_SIZE % 2:  # the pop size should be even
         POP_SIZE -= 1  # otherwise after the 1st generation it will decrease by 1
-    MAX_GENERATION = 20  # 4
+    MAX_GENERATION = 10  # 4
     SELECT_PERCENT = 0.2  # hyperparam (0.1 - 0.9)
     CROSSOVER_PROB = 0.7  # hyperparam (0.3 - 0.8)
     ELITE_CHROMS = 2  # hyperparam (2 - 10)
@@ -559,13 +474,12 @@ if __name__ == '__main__':
     MIN_KC, MAX_KC = 1000, 10000
     # MIN_PROJ, MAX_PROJ = 2, 10
     NUM_PROJ = 10
-    WTA_DIM =  # to be set
     top_word = 242
     percent_hash = 15
     C = 93
-    num_iter = 50
-    if dataset_name == '20news':
-        num_iter = 2000
+    num_iter = 2000#50
+    # if dataset_name == '20news':
+    #     num_iter = 2000
 
     max_thread = int(multiprocessing.cpu_count() * 0.7)
 
@@ -573,12 +487,19 @@ if __name__ == '__main__':
     sp.load('../spmcc.model')
     vocab, reverse_vocab, logprobs = read_vocab()
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
-    train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs)
-    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs)
 
-    PN_SIZE = train_set.shape[1]
-    MUTATE_PROB = NUM_PROJ / PN_SIZE * 0.8  # 0.8 is a hyperparam
-    MUTATE_PROB_VEC=2/WTA_DIM.shape[0]  #2 is a hyperparam
+    print('reading datasets')
+    train_set_list, train_label_list = [None, None, None], [None, None, None]
+    val_set_list, val_label_list = [None, None, None], [None, None, None]
+    train_set_list[0], train_label_list[0] = read_n_encode_dataset('../datasets/wos/wos11967-train.sp', vectorizer, logprobs)
+    val_set_list[0], val_label_list[0] = read_n_encode_dataset('../datasets/wos/wos11967-val.sp', vectorizer, logprobs)
+    train_set_list[1], train_label_list[1] = read_n_encode_dataset('../datasets/wikipedia/wikipedia-train.sp', vectorizer, logprobs)
+    val_set_list[1], val_label_list[1] = read_n_encode_dataset('../datasets/wikipedia/wikipedia-val.sp', vectorizer, logprobs)
+    train_set_list[2], train_label_list[2] = read_n_encode_dataset('../datasets/20news-bydate/20news-bydate-train.sp', vectorizer, logprobs)
+    val_set_list[2], val_label_list[2] = read_n_encode_dataset('../datasets/20news-bydate/20news-bydate-val.sp', vectorizer, logprobs)
+
+    PN_SIZE = len(vocab)
+    MUTATE_PROB = NUM_PROJ / PN_SIZE * 0.8  # hyperparam
 
     # main
     best_solution, best_fitness, avg_fitness_list, stat_list = genetic_alg()
