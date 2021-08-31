@@ -206,8 +206,30 @@ def roulette_wheel_selection_updated(fitness_list):
     random_num=np.random.choice(fitness_list,size=num_select,p=weights)
     return len([fitness_list.index(i) for i in random_num])
 
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    return np.exp(x) / np.sum(np.exp(x), axis=0)
 
 def rank_selection(fitness_list):
+    '''
+    Similar method to the roulette wheel selection, the difference is that the probability
+    is calculated according to the rank of the fitness values. 
+    Returns the index of chromosomes that have been selected.
+    '''
+    num_select = round(SELECT_PERCENT * POP_SIZE)
+
+    ranks=ss.rankdata(fitness_list)
+    for i, rank in enumerate(ranks):
+      ranks[i]= int(rank) / len(fitness_list)+1
+
+    ranks=softmax(ranks)
+    print(sum(ranks))
+
+    random_num=np.random.choice(fitness_list,size=num_select,p=ranks)
+    return [fitness_list.index(i) for i in random_num]
+
+
+def rank_selection_2(fitness_list):
     '''
     Similar method to the roulette wheel selection, the difference is that the probability
     is calculated according to the rank of the fitness values.
