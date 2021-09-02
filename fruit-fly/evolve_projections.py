@@ -206,6 +206,25 @@ def roulette_wheel_selection_updated(fitness_list):
     random_num=np.random.choice(fitness_list,size=num_select,p=weights)
     return len([fitness_list.index(i) for i in random_num])
 
+
+def roulette_wheel_selection(fitness_list, SELECT_PERCENT, POP_SIZE):
+  
+    """
+    Roulette wheel selection.
+    Return the index of genes that has been selected. 
+    """
+    running_total = []
+    sum_ = 0
+
+    for i in range(len(fitness_list)):
+        running_total.append(sum_ + fitness_list[i])
+        sum_ = running_total[i]
+
+    random_num = np.random.uniform(0, running_total[-1], round(SELECT_PERCENT * POP_SIZE))
+    selected = [np.argmin(running_total < i) for i in random_num]
+
+    return selected
+
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
     return np.exp(x) / np.sum(np.exp(x), axis=0)
@@ -388,7 +407,7 @@ def evolve(population, fitness_list):
 
     for i in range(len(population) // 2):
         # selection
-        selected = rank_selection(fitness_list)
+        selected = roulette_wheel_selection(fitness_list)
         mother_choice = np.random.choice(selected)
         selected.remove(mother_choice)
         father_choice = np.random.choice(selected)
@@ -509,6 +528,7 @@ if __name__ == '__main__':
     sp.load('../spmcc.model')
     vocab, reverse_vocab, logprobs = read_vocab()
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
+    print("roulette_wheel_selection")
 
     print('reading datasets')
     train_set_list, train_label_list = [None, None, None], [None, None, None]
