@@ -528,7 +528,6 @@ if __name__ == '__main__':
     sp.load('../spmcc.model')
     vocab, reverse_vocab, logprobs = read_vocab()
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
-    print("roulette_wheel_selection")
 
     print('reading datasets')
     train_set_list, train_label_list = [None, None, None], [None, None, None]
