@@ -42,6 +42,8 @@ def generate_proj(PN_SIZE, NUM_PROJ, WTA_DIM):
       weight_mat[i, j] = 1
   list_evolution.append(lil_matrix(weight_mat))
   vec=np.random.randint(2, size=WTA_DIM)
+  while np.count_nonzero(vec)==0:
+    vec=np.random.randint(2, size=WTA_DIM)
   list_evolution.append(vec)
   return list_evolution
 
@@ -114,8 +116,8 @@ def fitness(chromosome, prev_fitness):
   Measure the fitness of one projection
   """
   weight_mat=chromosome[0]
-  percent_hash=int("".join(str(x) for x in chromosome[1]), 2)
-  print(percent_hash)
+  percent_hash=int("".join(str(x) for x in chromosome[1]), 2)  #transform vector into real number
+  #print("Binary vector transformed into percent hash:", percent_hash)
   kc_size = weight_mat.shape[0]
   kc_score = 1 / np.log10(kc_size)
   if prev_fitness != -1:
@@ -237,13 +239,17 @@ def mutate_list(chrom_list, MUTATE_PROB, MUTATE_PROB_VEC):
             chrom[row, col]=0
       mutated_chrom.append(chrom)
     else:
-      for i in range(chrom.shape[0]):
-        if np.random.random() < MUTATE_PROB_VEC: # a hyperpameter
-          print(i, chrom[i])
-          if chrom[i]==0:
-            chrom[i]=1
-          else:
-            chrom[i]=0
+      old_chrom=chrom
+      chrom=np.array([0]) # this is to always get into the loop for at least once
+      while np.count_nonzero(chrom)==0:   #checking if vector ==0
+        chrom=old_chrom  #so that the loop always restarts with the original chrom vector
+        for n, i in enumerate(range(chrom.shape[0])):
+          if np.random.random() < MUTATE_PROB_VEC: # a hyperpameter
+            if chrom[i]==0:
+              chrom[i]=1
+            else:
+              chrom[i]=0
+      #print("vector inside mutation function:", int("".join(str(x) for x in chrom), 2))
       mutated_chrom.append(chrom)
 
   return mutated_chrom
@@ -355,6 +361,7 @@ def genetic_alg(POP_SIZE, CROSSOVER_PROB, SELECT_PERCENT, MUTATE_PROB, MUTATE_PR
     with open('./models/evolution/stat_list', "wb") as f:
       pickle.dump(stat_list, f)
   
+  print("sum improvement:", sum(total_improvement))
   return sum(total_improvement)
 
 def bayesian_optimization(NUM_PROJ, PN_SIZE, WTA_DIM):
