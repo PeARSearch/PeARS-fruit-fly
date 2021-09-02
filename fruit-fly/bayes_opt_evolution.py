@@ -115,6 +115,7 @@ def fitness(chromosome, prev_fitness):
   """
   weight_mat=chromosome[0]
   percent_hash=int("".join(str(x) for x in chromosome[1]), 2)
+  print(percent_hash)
   kc_size = weight_mat.shape[0]
   kc_score = 1 / np.log10(kc_size)
   if prev_fitness != -1:
@@ -137,7 +138,7 @@ def fitness(chromosome, prev_fitness):
   # return weight_mat.count_nonzero()
 
 
-def validate(population, fitness_list):
+def validate(population, fitness_list, POP_SIZE):
   """
   Calculate the fitness of every chromosome
   :param population: the list that contains every chromosomes
@@ -315,7 +316,7 @@ def genetic_alg(POP_SIZE, CROSSOVER_PROB, SELECT_PERCENT, MUTATE_PROB, MUTATE_PR
                             CROSSOVER_PROB, MUTATE_PROB, MUTATE_PROB_VEC)
 
     # validate the population
-    fitness_tuple = validate(population, fitness_list)
+    fitness_tuple = validate(population, fitness_list, POP_SIZE)
     fitness_list = [i[0] for i in fitness_tuple]
     val_score_list = [i[1] for i in fitness_tuple]
     kc_score_list = [i[2] for i in fitness_tuple]
