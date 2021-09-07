@@ -87,7 +87,7 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
 
     print('training')
     score_list, model_list = [], []
-    score_model_list = joblib.Parallel(n_jobs=3, prefer="threads")(
+    score_model_list = joblib.Parallel(n_jobs=max_thread, prefer="threads")(
         joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
     score_list += [i[0] for i in score_model_list]
     model_list += [i[1] for i in score_model_list]
