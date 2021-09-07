@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, vstack
 
 from hash import wta_vectorized
-from evolve_flies import genetic_alg
+# from evolve_flies import genetic_alg
 
 from bayes_opt import BayesianOptimization
 from bayes_opt.logger import JSONLogger
@@ -95,13 +95,13 @@ def get_stats(pop: list):
         with open('./models/evolution/best_val_wos', "wb") as f:
             pickle.dump(pop[np.argmax(val_score[:, 0])], f)
     # best val wiki
-    if max(val_score[:, 1]) > best_scores['val_wiki']:
-        best_scores['val_wiki'] = max(val_score[:, 1])
-        with open('./models/evolution/best_val_wiki', "wb") as f:
+    if max(val_score[:, 1]) > best_scores['val_wikipedia']:
+        best_scores['val_wikipedia'] = max(val_score[:, 1])
+        with open('./models/evolution/best_val_wikipedia', "wb") as f:
             pickle.dump(pop[np.argmax(val_score[:, 1])], f)
     # best val 20news
     if max(val_score[:, 2]) > best_scores['val_20news']:
-        best_scores['val_wos'] = max(val_score[:, 2])
+        best_scores['val_20news'] = max(val_score[:, 2])
         with open('./models/evolution/best_val_20news', "wb") as f:
             pickle.dump(pop[np.argmax(val_score[:, 2])], f)
     # update best json
