@@ -4,7 +4,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, vstack
 
 from hash import wta_vectorized
-from evolve_projections import genetic_alg
+from evolve_flies import genetic_alg
 
 from bayes_opt import BayesianOptimization
 from bayes_opt.logger import JSONLogger
