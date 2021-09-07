@@ -284,7 +284,7 @@ if __name__ == '__main__':
     MIN_PROJ, MAX_PROJ = 5, 20
     top_word = 700
     C = 100
-    num_iter = 2000
+    num_iter = 2000  # wikipedia and wos only need 50 steps
     max_thread = int(multiprocessing.cpu_count() * 0.7)
     sp = spm.SentencePieceProcessor()
     sp.load('../spmcc.model')
