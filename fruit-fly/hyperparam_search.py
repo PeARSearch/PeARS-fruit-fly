@@ -137,8 +137,8 @@ def optimize_fruitfly(continue_log):
 
     optimizer = BayesianOptimization(
         f=_classify,
-        pbounds={"topword": (200, 1000), "KC_size": (8000, 20000),
-                 "proj_size": (7, 20), "percent_hash": (15, 40), "C": (50, 200)},
+        pbounds={"topword": (10, 250), "KC_size": (3000, 9000),
+                 "proj_size": (2, 10), "percent_hash": (2, 20), "C": (1, 100)},
         #random_state=1234,
         verbose=2
     )
