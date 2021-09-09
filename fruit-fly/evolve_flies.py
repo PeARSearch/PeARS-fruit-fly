@@ -116,7 +116,7 @@ def crossover(parent1: Fly, parent2: Fly):
     """
     Crossover two flies
     Input is a Fly(); Return two new offsprings
-    Do crossover on two elements: the projection and the wta
+    Do crossover on two components: the projection and the wta
     Projection: randomly truncate rows in the projection matrix that has higher number of row
     until the two matrices have the same number of row, then split and swap vertically
     Wta: take randomly two values between the range of two wta values
@@ -229,10 +229,10 @@ def genetic_alg(pop_size: int, crossover_prob: float, select_percent: float,
     """
     # create log
     log_file = './models/evolution/' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '.json'
-    append_as_json({'pop_size': pop_size, 'crossover_prob': crossover_prob,
+    append_as_json({'pop_size': pop_size, 'max_generation': MAX_GENERATION, 'crossover_prob': crossover_prob,
                     'select_percent': select_percent, 'mutate_prob_proj': mutate_prob_proj,
                     'mutate_scale_wta': mutate_scale_wta}, log_file)
-    append_as_json({'max_generation': MAX_GENERATION, 'min_wta': MIN_WTA, 'max_wta': MAX_WTA,
+    append_as_json({'min_wta': MIN_WTA, 'max_wta': MAX_WTA,
                     'min_kc': MIN_KC, 'max_kc': MAX_KC, 'min_proj': MIN_PROJ, 'max_proj': MAX_PROJ,
                     'top_word': top_word, 'C': C, 'num_iter': num_iter}, log_file)
 
@@ -255,7 +255,6 @@ def genetic_alg(pop_size: int, crossover_prob: float, select_percent: float,
         # evaluate the population
         eval_pop(population)
         # fitness_list = [individual.get_fitness() for individual in population]
-
         # print progress
         # avg_fitness = np.mean(fitness_list)
         # if g == 0:
@@ -294,8 +293,8 @@ if __name__ == '__main__':
 
     print('reading datasets')
     num_dataset = 3
-    train_set_list, train_label_list = [None] * 3, [None] * 3
-    val_set_list, val_label_list = [None] * 3, [None] * 3
+    train_set_list, train_label_list = [None] * num_dataset, [None] * num_dataset
+    val_set_list, val_label_list = [None] * num_dataset, [None] * num_dataset
     train_set_list[0], train_label_list[0] = read_n_encode_dataset('../datasets/wos/wos11967-train.sp', vectorizer, logprobs)
     val_set_list[0], val_label_list[0] = read_n_encode_dataset('../datasets/wos/wos11967-val.sp', vectorizer, logprobs)
     train_set_list[1], train_label_list[1] = read_n_encode_dataset('../datasets/wikipedia/wikipedia-train.sp', vectorizer, logprobs)
@@ -303,4 +302,4 @@ if __name__ == '__main__':
     train_set_list[2], train_label_list[2] = read_n_encode_dataset('../datasets/20news-bydate/20news-bydate-train.sp', vectorizer, logprobs)
     val_set_list[2], val_label_list[2] = read_n_encode_dataset('../datasets/20news-bydate/20news-bydate-val.sp', vectorizer, logprobs)
 
-    genetic_alg(pop_size=1000, crossover_prob=0.5, select_percent=0.2, mutate_prob_proj=0.02, mutate_scale_wta=2)
+    genetic_alg(pop_size=2000, crossover_prob=0.5, select_percent=0.2, mutate_prob_proj=0.04, mutate_scale_wta=2)
