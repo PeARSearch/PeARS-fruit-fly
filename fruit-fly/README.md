@@ -25,7 +25,7 @@ We now train a simple logistic regression model to classify documents on the tra
 
     python classify.py --file=tmp/20news-bydate-train.kc2000.size10.trial0.top100.wta10.hs --C=10 --num_iter=1000
 
-in which **C** is the the inverse of regularization term in logistic regression, *num_iter* is the number of iteration
+in which **C** is the the inverse of regularization term in logistic regression, **num_iter** is the number of iteration
 in the optimization process.
 
 ## Run hyper-parameter search on three datasets
@@ -56,3 +56,17 @@ examples. Run:
     python test_models.py --test_path=../datasets/wos/wos11967-test.sp --config_path=./models/best_models/wos_config.json
 
 to get the average score on **--test_path** for all the hyper-parameter settings in **--config_path**.
+
+## Run the evolution process
+
+The evolution process helps to find the projection matrix and the winner-take-all rate that satisfy a pre-defined goal.
+So far, the goal is searching for a fly that performs well on classification task (on both 3 datasets), and it also
+has small number of non-zero elements in the hashing results.
+
+To run the evolution process:
+
+    python -W ignore evolve_flies.py 
+
+The hyper-parameters, as well as the information in each generation can be found in a json file in *models/evolution*.
+The best flies for each criterion (best overall fitness, best average validation accuracies on 3 datasets, lowest number
+of non-zero elements, best validation accuracies on each datasets) can be found in the same directory.
