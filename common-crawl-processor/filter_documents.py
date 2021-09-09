@@ -26,7 +26,6 @@ from nltk.tokenize import RegexpTokenizer
 from gensim.test.utils import datapath
 from gensim.models import LdaModel
 
-
 def load_model(model):
   temp_file = datapath(model)
   lda = LdaModel.load(temp_file, mmap='r')
@@ -72,21 +71,16 @@ def filtering(folder, model, lda_path, keep_discarded):
 				if line.startswith("</doc>"):
 					if doc != "" or doc != " ":
 						label = LDAmodel.classify_removal(doc, dictionary, lda, tokenizer, topics)
+						dic={}
+						dic['doc']=doc
+						dic['lang']='en'
+						dic['title']=title
+						dic['url']=url
 						if label != 1:
-							dic={}
-							dic['doc']=doc
-							dic['lang']='en'
-							dic['title']=title
-							dic['url']=url
 							utils.append_json_check_len(dic, j_keep)
 							n_kept+=1
 						else:
 							if keep_discarded=='True':
-								dic={}
-								dic['doc']=doc
-								dic['lang']='en'
-								dic['title']=title
-								dic['url']=url
 								j_disc=utils.append_json_check_len(dic, j_disc)
 						n_doc+=1
 						if n_doc%100==0:
@@ -100,6 +94,7 @@ def filtering(folder, model, lda_path, keep_discarded):
 					else:
 						doc=doc+" "+line
 					continue
+	return j_keep
 
 if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
@@ -110,4 +105,6 @@ if __name__ == '__main__':
   lda_path="./"+args['--lda_path']+"/"
   keep_discarded=args['--keep_discarded']
 
-  filtering(folder, model, lda_path, keep_discarded)
+  j_keep=filtering(folder, model, lda_path, keep_discarded)
+  utils.compress_file(j_keep)
+
