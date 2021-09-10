@@ -183,7 +183,7 @@ def dic_metacategories(fname):
 	f_in.close()
 	return dic_meta
 
-def distribution_metacategories(txt_files):
+def distribution_metacategories():
 	"""
 	Takes the folder where the links.gz and links.txt.gz are and the .txt file where 
 	the meta-categories and their respective categories are. 
@@ -239,4 +239,4 @@ if __name__ == '__main__':
     	threshold = int(input("Insert minumum frequency of ngrams (threshold): "))	   
     	create_metacategories(threshold)
     	name_metacategories()
-    	distribution_metacategories(txt_files)
+    	distribution_metacategories()
