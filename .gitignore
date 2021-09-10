@@ -104,4 +104,13 @@ venv.bak/
 .mypy_cache/
 
 # dataset
+<<<<<<< HEAD
 datasets/20news-bydate/
+=======
+datasets/20news-bydate/
+wikipedia_categories/wiki_cats/
+
+# models
+models/kc*
+
+>>>>>>> meta_categories
