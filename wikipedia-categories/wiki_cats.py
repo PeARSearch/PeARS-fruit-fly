@@ -2,9 +2,9 @@
 Wikipedia's external links
 
 Usage:
-  wiki_cat.py --linksfolder=<foldername> --function=<functionoption>
-  wiki_cat.py (-h | --help)
-  wiki_cat.py --version
+  wiki_cats.py --linksfolder=<foldername> --function=<functionoption>
+  wiki_cats.py (-h | --help)
+  wiki_cats.py --version
 Options:
   -h --help                       Show this screen.
   --version                       Show version.
@@ -13,7 +13,8 @@ Options:
   --function=<functionname>		  	Name of the function you want to execute
 
 """
-from docopt import docopt
+
+from docopt import docopt 
 import gzip
 import glob
 from collections import Counter, defaultdict
