@@ -60,7 +60,7 @@ to get the average score on **--test_path** for all the hyper-parameter settings
 ## Run the evolution process
 
 The evolution process helps to find the projection matrix and the winner-take-all rate that satisfy a pre-defined goal.
-So far, the goal is searching for a fly that performs well on classification task (on both 3 datasets), and it also
+So far, the goal is searching for a fly that performs well on the classification task (on all 3 datasets), and also
 has small number of non-zero elements in the hashing results.
 
 To run the evolution process:
