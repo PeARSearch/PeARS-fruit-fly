@@ -1,6 +1,6 @@
 """Dataset preparation for wikipedia meta-categories and their respective webpage documents.
 Usage:
-  prepare_dataset_wiki.py --linksfolder=<foldername>
+  prepare_dataset_wiki.py --linksfolder=<foldername>  --num_docs=<integer> --num_metacats=<integer>
   prepare_dataset_wiki.py (-h | --help)
   prepare_dataset_wiki.py --version
 Options:
@@ -8,6 +8,8 @@ Options:
   --version                       Show version.
   --linksfolder=<foldername>      Name of folder where the wikipedia external links and their 
                                   respective pages have been placed
+  --num_docs=<integer>            Number of documents to keep per meta-category
+  --num_metacats=<integer>        Number of metacatories to keep                        
 """
 
 import random
@@ -19,6 +21,7 @@ import re
 from collections import defaultdict
 import pickle
 import wiki_cats
+from docopt import docopt
 
 def metacats_with_texts(txt_files):
   '''
@@ -60,7 +63,7 @@ def metacats_with_texts(txt_files):
               dic_cat[dic_metacats[cat]].append(dic_url[line[0]])
   return dic_cat
 
-def prepare_texts_labels(docs_dic):
+def prepare_texts_labels(docs_dic, num_docs, num_metacats):
   """
   Returns a list of tuples with the doc in the first position and the label in the second. 
   This process takes at most 2000 documents per meta-cat and randomizes the order of labels. 
@@ -78,7 +81,7 @@ def prepare_texts_labels(docs_dic):
     line=line.split('\t')
     if line[0] not in discard:
       metacats.append(line[0])
-      if len(metacats)>=180:
+      if len(metacats)>=num_metacats:
         break
   f_meta.close()
   print("LENGTH metacategories:", len(metacats))
@@ -89,8 +92,8 @@ def prepare_texts_labels(docs_dic):
   meta_text=[]
   for meta in docs_dic.keys():
     if meta in metacats:
-      if len(docs_dic[meta])>2000:
-        docs = random.sample(docs_dic[meta], 2000)
+      if len(docs_dic[meta])>num_docs:
+        docs = random.sample(docs_dic[meta], num_docs)
       else:
         docs = random.sample(docs_dic[meta], len(docs_dic[meta]))
       for doc in docs:
@@ -148,22 +151,26 @@ def output_wordpieces(meta_text, train_p, val_p):
     f.write(str(n_train) + ' ' + str(n_val) + ' ' + str(n_test))
   f.close()
 
-def wikipedia_cats(meta_text):
+def wikipedia_cats(meta_text): 
 
     output_wordpieces(meta_text, train_p=0.6, val_p=0.2)
-    print('Datasets ready to be used for the classification...')
+    print('Datasets ready to be used for the classification task...')
 
 
 if __name__ == '__main__':
+    args = docopt(__doc__, version='Prepare dataset of wikipedia s externial links, ver 0.1')
+    
     random.seed(99)
     sp = spm.SentencePieceProcessor()
     sp.load('../spmcc.model')
 
-    args = docopt(__doc__, version='Prepare dataset of wikipedia s externial links, ver 0.1')
     linksfolder=args['--linksfolder']
+    num_docs=int(args['--num_docs'])
+    num_metacats=int(args['--num_metacats'])
+
     txt_files = glob.glob(linksfolder+"*links.txt.gz")
 
     docs_cat = metacats_with_texts(txt_files)  #pickle.load(open('dic_cat.p', 'rb'))
-    meta_text = prepare_texts_labels(docs_cat)
+    meta_text = prepare_texts_labels(docs_cat, num_docs, num_metacats)
 
     wikipedia_cats(meta_text)

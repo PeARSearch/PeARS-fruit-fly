@@ -121,7 +121,7 @@ def create_metacategories(threshold):
 		ignore_cats=set()
 	ngrams_freq=glob.glob("./wiki_cats/ngram*.p")
 	with open("./wiki_cats/metacategories.txt", 'a') as f:
-		for ngram in ngrams_freq: 
+		for ngram in sorted(ngrams_freq, reverse=True): 
 			num=re.findall(r'\d+', ngram)[0]
 			ngram_freq=pickle.load(open(ngram, 'rb'))
 			dic=pickle.load(open("./wiki_cats/dic"+num+".p", 'rb'))

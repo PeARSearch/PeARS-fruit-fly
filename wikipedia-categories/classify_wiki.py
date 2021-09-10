@@ -11,11 +11,14 @@ Options:
   --num_iter=<n>     Number of iterations
 """
 
-from docopt import docopt
+from docopt import docopt 
 import numpy as np
 from sklearn import linear_model
 import pickle
 import time
+from fruit_fly.evolve_flies import Fly
+print(Fly)
+exit()
 
 #print(device)
 #random.seed(77)

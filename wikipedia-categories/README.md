@@ -31,3 +31,14 @@ You can find the meta-categories and their respective categories in the file './
 
 ### Create a dataset for the classification
 
+We are going to use the webpages extracted from Wikipedia's external links in a classification task, therefore, we also need to make sure the meta-categories form semantically meaningful groups. That is why we need to go through the 'distrib_metacategories.txt' manually and identify meta-categories that should be discarded. You can add each one of them per line in the file called 'metacats_to_discard.txt' so that the next step will disconsider those categories for the dataset preparation. 
+
+After that, we can decide on the number of meta-categories we want to keep for our classification task and the number of documents we would like to keep per meta-category so that we obtain a more balanced dataset. For example, we choose to keep 180 categories and 2000 documents. Then, we can run:
+
+    python3 prepare_dataset_wiki.py --linksfolder=./links/ --num_docs=2000 --num_metacats=180
+
+The processed datasets can be found in '.wiki_cats'. 
+
+### Classification
+
+We are going to use the fly that evolved to be the best in our evolutionary process. 
