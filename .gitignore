@@ -107,6 +107,6 @@ venv.bak/
 datasets/20news-bydate/
 datasets/wos/
 datasets/wikipedia/
-
+wikipedia_categories/wiki_cats/
 # models
 models/kc*
