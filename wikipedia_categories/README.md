@@ -38,7 +38,3 @@ After that, we can decide on the number of meta-categories we want to keep for o
     python3 prepare_dataset_wiki.py --linksfolder=./links/ --num_docs=2000 --num_metacats=180
 
 The processed datasets can be found in '.wiki_cats'. 
-
-### Classification
-
-We are going to use the fly that evolved to be the best in our evolutionary process. 
