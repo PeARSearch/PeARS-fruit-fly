@@ -87,7 +87,7 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
 
     print('training')
     score_list, model_list = [], []
-    score_model_list = joblib.Parallel(n_jobs=3, prefer="threads")(
+    score_model_list = joblib.Parallel(n_jobs=max_thread, prefer="threads")(
         joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
     score_list += [i[0] for i in score_model_list]
     model_list += [i[1] for i in score_model_list]
@@ -137,8 +137,8 @@ def optimize_fruitfly(continue_log):
 
     optimizer = BayesianOptimization(
         f=_classify,
-        pbounds={"topword": (200, 1000), "KC_size": (8000, 20000),
-                 "proj_size": (7, 20), "percent_hash": (15, 40), "C": (50, 200)},
+        pbounds={"topword": (10, 250), "KC_size": (3000, 9000),
+                 "proj_size": (2, 10), "percent_hash": (2, 20), "C": (1, 100)},
         #random_state=1234,
         verbose=2
     )
@@ -150,7 +150,7 @@ def optimize_fruitfly(continue_log):
     logger = JSONLogger(path=tmp_log_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-    optimizer.maximize(n_iter=500)
+    optimizer.maximize(n_iter=200)
     print("Final result:", optimizer.max)
     with open(main_log_path, 'a') as f_main:
         with open(tmp_log_path) as f_tmp:
