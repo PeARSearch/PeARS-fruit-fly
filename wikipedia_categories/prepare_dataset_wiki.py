@@ -93,9 +93,8 @@ def prepare_texts_labels(docs_dic, num_docs, num_metacats):
   meta_text=[]
   for meta in docs_dic.keys():
     if meta in metacats:
-<<<<<<< HEAD
-      if len(docs_dic[meta])>2000:
-        docs = random.sample(docs_dic[meta], 2000)
+      if len(docs_dic[meta])>num_docs:
+        docs = random.sample(docs_dic[meta], num_docs)
       else:
         docs = random.sample(docs_dic[meta], len(docs_dic[meta]))
       for doc in docs:
