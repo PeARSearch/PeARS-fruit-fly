@@ -34,8 +34,6 @@ def hash_a_document(docs, outfile_txt):
 
   # load dataset
   top_word = 700
-  C = 100
-  num_iter = 2000  # wikipedia and wos only need 50 steps
   sp = spm.SentencePieceProcessor()
   sp.load('../spmcc.model')
   vocab, reverse_vocab, logprobs = read_vocab()
