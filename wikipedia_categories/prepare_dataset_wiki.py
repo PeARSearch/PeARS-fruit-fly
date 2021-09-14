@@ -1,6 +1,6 @@
 """Dataset preparation for wikipedia meta-categories and their respective webpage documents.
 Usage:
-  prepare_dataset_wiki.py --linksfolder=<foldername>  --num_docs=<integer> --num_metacats=<integer>
+  prepare_dataset_wiki.py --linksfolder=<foldername> --num_docs=<integer> --num_metacats=<integer>
   prepare_dataset_wiki.py (-h | --help)
   prepare_dataset_wiki.py --version
 Options:
@@ -30,7 +30,7 @@ def metacats_with_texts(txt_files):
   '''
   dic_metacats=wiki_cats.dic_metacategories('./wiki_cats/metacategories_topics.txt')
   dic_url={}
-  dic_cat=defaultdict(list)
+  docs_dic=defaultdict(list)
   pattern_url = "url='(.*?)'>"
   for txt_gz in txt_files:
     with gzip.open(txt_gz,'rt') as f:
@@ -60,8 +60,9 @@ def metacats_with_texts(txt_files):
           for cat in line[1:]:
             cat=cat.lower()
             if re.match(r"[A-Za-z0-9]+", cat) and cat in dic_metacats.keys():
-              dic_cat[dic_metacats[cat]].append(dic_url[line[0]])
-  return dic_cat
+              docs_dic[dic_metacats[cat]].append((dic_url[line[0]], line[0]))
+  return docs_dic
+
 
 def prepare_texts_labels(docs_dic, num_docs, num_metacats):
   """
@@ -92,15 +93,16 @@ def prepare_texts_labels(docs_dic, num_docs, num_metacats):
   meta_text=[]
   for meta in docs_dic.keys():
     if meta in metacats:
-      if len(docs_dic[meta])>num_docs:
-        docs = random.sample(docs_dic[meta], num_docs)
+<<<<<<< HEAD
+      if len(docs_dic[meta])>2000:
+        docs = random.sample(docs_dic[meta], 2000)
       else:
         docs = random.sample(docs_dic[meta], len(docs_dic[meta]))
       for doc in docs:
-        meta_text.append((doc, label2idx[meta]))
+        meta_text.append((doc[0], doc[1], label2idx[meta]))  #doc[1] is the url of the document
 
   meta_text=random.sample(meta_text, len(meta_text)) 
-  return meta_text    
+  return meta_text
 
 def output_wordpieces(meta_text, train_p, val_p):
   """
@@ -117,26 +119,27 @@ def output_wordpieces(meta_text, train_p, val_p):
 
   for tup in meta_text:
     doc = tup[0]
-    label = str(tup[1])
+    # url=tup[1]
+    label = str(tup[2])
 
     ll = sp.encode_as_pieces(doc)
 
     # use random to decide the current doc belongs to train, val, or test
     is_train = random.choices([0, 1], weights=[1-train_p, train_p])[0]
     if is_train:
-      outfile_train.write("<doc id="+str(label_idx)+" class="+label+">\n")
+      outfile_train.write("<doc id="+str(label_idx)+" class="+label+">\n")  # url="+url+"
       outfile_train.write(' '.join([wp for wp in ll])+'\n')
       outfile_train.write("</doc>\n")
       n_train += 1
     else:
       is_val = random.choices([0, 1], weights=[1-val_p/(1-train_p), val_p/(1-train_p)])[0]
       if is_val:
-        outfile_val.write("<doc id="+str(label_idx)+" class="+label+">\n")
+        outfile_val.write("<doc id="+str(label_idx)+" class="+label+">\n") #url="+url+"
         outfile_val.write(' '.join([wp for wp in ll])+'\n')
         outfile_val.write("</doc>\n")
         n_val += 1
       else:
-        outfile_test.write("<doc id="+str(label_idx)+" class="+label+">\n")
+        outfile_test.write("<doc id="+str(label_idx)+" class="+label+">\n")  # url="+url+"
         outfile_test.write(' '.join([wp for wp in ll])+'\n')
         outfile_test.write("</doc>\n")
         n_test += 1
@@ -148,13 +151,13 @@ def output_wordpieces(meta_text, train_p, val_p):
 
   # write the number of docs in each part
   with open('./wiki_cats/wiki_cats_stat.txt', 'w') as f:
-    f.write(str(n_train) + ' ' + str(n_val) + ' ' + str(n_test))
+    f.write(str(n_train) + ' ' + str(n_val) + ' ' + str(n_test)+'\n')
   f.close()
 
-def wikipedia_cats(meta_text): 
+def wikipedia_cats(meta_text):
 
     output_wordpieces(meta_text, train_p=0.6, val_p=0.2)
-    print('Datasets ready to be used for the classification task...')
+    print('Datasets ready to be used for the classification...')
 
 
 if __name__ == '__main__':

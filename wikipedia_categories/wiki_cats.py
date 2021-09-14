@@ -13,8 +13,7 @@ Options:
   --function=<functionname>		  	Name of the function you want to execute
 
 """
-
-from docopt import docopt 
+from docopt import docopt
 import gzip
 import glob
 from collections import Counter, defaultdict
@@ -68,7 +67,7 @@ def count_categories(txt_files):
 		for t in most:
 			f.write(t[0]+"\t"+str(t[1])+'\n')
 	f.close()
-	print("Find categories' list in './wiki_cats/distrib_categories.txt'")
+	print("Find categories reverse sorted in './wiki_cats/distrib_categories.txt'")
 
 def read_categories():
 	cats=[]
@@ -121,7 +120,7 @@ def create_metacategories(threshold):
 		ignore_cats=set()
 	ngrams_freq=glob.glob("./wiki_cats/ngram*.p")
 	with open("./wiki_cats/metacategories.txt", 'a') as f:
-		for ngram in sorted(ngrams_freq, reverse=True): 
+		for ngram in ngrams_freq: 
 			num=re.findall(r'\d+', ngram)[0]
 			ngram_freq=pickle.load(open(ngram, 'rb'))
 			dic=pickle.load(open("./wiki_cats/dic"+num+".p", 'rb'))
