@@ -32,7 +32,6 @@ def hash_a_document(docs, outfile_txt):
   with open('best_val_score', 'rb') as f:  # modified the name of the fruit-fly here
       best_fly = pickle.load(f)
 
-  # load dataset
   top_word = 700
   sp = spm.SentencePieceProcessor()
   sp.load('../spmcc.model')
@@ -65,8 +64,6 @@ def hash_a_document(docs, outfile_txt):
     print("Output can be found in hashes")
     if e % 2 == 0:
       print(f"{e} documents hashed so far...")
-
-# your_matrix_back = sparse.load_npz("yourmatrix.npz")
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Hashing a document, ver 0.1')
