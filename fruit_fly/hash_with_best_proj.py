@@ -65,26 +65,20 @@ def hash_a_document(docs, outfile_txt):
     if e % 2 == 0:
       print(f"{e} documents hashed so far...")
 
-# matrix_back = sparse.load_npz("yourmatrix.npz")
+if __name__ == '__main__':
+    args = docopt(__doc__, version='Hashing a document, ver 0.1')
 
-# if __name__ == '__main__':
-#     args = docopt(__doc__, version='Hashing a document, ver 0.1')
+    f_in = args['--docfile']
 
-#     f_in = args['--docfile']
+    pathlib.Path('./hashes').mkdir(parents=True, exist_ok=True)
 
-#     pathlib.Path('./hashes').mkdir(parents=True, exist_ok=True)
+    folder_hs = "./hashes/"
+    outfile_txt = open("./hashes/hs_dats.sp", 'a')
 
-#     folder_hs = "./hashes/"
-#     outfile_txt = open("./hashes/hs_dats.sp", 'a')
+    docs=[]
+    f_text=open(f_in, 'r')
+    for line in f_text.read().splitlines():
+      if line != "":
+        docs.append(line)
 
-#     docs=[]
-#     f_text=open(f_in, 'r')
-#     for line in f_text.read().splitlines():
-#       if line != "":
-#         docs.append(line)
-
-#     hash_a_document(docs, outfile_txt)
-with open('best_val_score', 'rb') as f:  # modified the name of the fruit-fly here
-  best_fly = pickle.load(f)
-
-print(best_fly.projection.shape)
+    hash_a_document(docs, outfile_txt)
