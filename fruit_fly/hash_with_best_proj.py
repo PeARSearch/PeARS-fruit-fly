@@ -1,13 +1,14 @@
 """Hash a document with best performing fly
 
 Usage:
-  hash_with_best_proj.py --docfile=<filename> 
+  hash_with_best_proj.py --docfile=<filename> --flyfolder=<foldername>
   hash_with_best_proj.py (-h | --help)
   hash_with_best_proj.py --version
 Options:
   -h --help                 Show this screen.
   --version                 Show version.
-  --docfile=<filename>         String containing web document. 
+  --docfile=<filename>      Name of file containing doc and information about the doc such as URL and label
+  --flyfolder=<foldername>  Name of folder where best fly is located
 
 """
 
@@ -21,70 +22,95 @@ from classify import train_model
 from hash import read_vocab
 from utils import hash_dataset_
 from scipy import sparse
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, vstack
 import pathlib
 from docopt import docopt
 import glob
 import re
+from hash import wta, return_keywords
 
-def hash_a_document(docs, outfile_txt):
-  # load model
-  with open('best_val_score', 'rb') as f:  # modified the name of the fruit-fly here
-      best_fly = pickle.load(f)
+def hash_a_document(f_dataset, best_fly):
 
-  top_word = 700
+  top_words = 700
+  C = 100
+  num_iter = 2000  # wikipedia and wos only need 50 steps
   sp = spm.SentencePieceProcessor()
   sp.load('../spmcc.model')
   vocab, reverse_vocab, logprobs = read_vocab()
   vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
 
-  matrices_id = glob.glob('./hashes/*.npz')
-  if len(matrices_id)==0:
-    last_id=-1
-    print(last_id)
-  else:
-    last_id = max([int(re.findall(r'\d+', i)[0]) for i in matrices_id])
-    print(last_id)
+  with open(f_dataset,'r') as f:
+    doc=""
+    for e, l in enumerate(f):
+      l = l.rstrip('\n')
+      if l[:4] == "<doc":
+        m = re.search(".*id=([^ ]*) ",l)
+        ID=m.group(1)
+        m = re.search(".*class=([^ ]*)>",l)
+        lab=m.group(1)
+        m = re.search(".*url=([^ ]*) ",l)
+        url=m.group(1)
+        continue
 
-  for e, doc in enumerate(docs):
-    last_id+=1
-    ll = sp.encode_as_pieces(doc)
-    X = vectorizer.fit_transform([" ".join(ll)])
-    X = csr_matrix(X)
-    print(X.shape)
-    X = X.multiply(logprobs)
+      if l[:5] != "</doc" and l[:4] != "<doc":
+        doc = l 
+        continue
 
-    hs = hash_dataset_(dataset_mat=X, weight_mat=best_fly.projection,
-                               percent_hash=best_fly.wta, top_words=top_word)
+      if l[:5] == "</doc" and doc != "":
+        ll = sp.encode_as_pieces(doc)
+        X = vectorizer.fit_transform([" ".join(ll)])
+        X = csr_matrix(X)
+        X = X.multiply(logprobs)
 
-    outfile_txt.write("<doc id="+str(last_id)+" class="+"UNK"+">\n")  # url="+url+"
-    outfile_txt.write("</doc>\n")
+        hs = hash_dataset_(dataset_mat=X, weight_mat=best_fly.projection,
+                                   percent_hash=best_fly.wta, top_words=top_words)
 
-    sparse.save_npz(folder_hs+str((last_id))+".npz", hs)
-    print("Output can be found in hashes")
-    if e % 2 == 0:
-      print(f"{e} documents hashed so far...")
+        vec = wta(X.toarray()[0], top_words, percent=False)
+        keywords = [reverse_vocab[w] for w in return_keywords(vec)]
 
-# matrix_back = sparse.load_npz("yourmatrix.npz")
+        hs_file='./hashes/'+lab+".hs"
+        if hs_file in glob.glob('./hashes/*.hs'):
+          hs_matrix = pickle.load(open(hs_file, 'rb'))
+          # print(hs_file)
+          hs_matrix = vstack([hs_matrix, hs])
+          pickle.dump(hs_matrix, open(hs_file, 'wb'))
+          ids = pickle.load(open(hs_file.replace(".hs", ".ids"), 'rb'))
+          ids.append(ID)
+          pickle.dump(ids, open(hs_file.replace(".hs", ".ids"), 'wb'))
+          labels = pickle.load(open(hs_file.replace(".hs", ".cls"), 'rb'))
+          labels.append(lab)
+          pickle.dump(labels, open(hs_file.replace(".hs", ".cls"), 'wb'))
+          urls = pickle.load(open(hs_file.replace(".hs", ".url"), 'rb'))
+          urls.append(url)
+          pickle.dump(urls, open(hs_file.replace(".hs", ".url"), 'wb'))
+          keyws = pickle.load(open(hs_file.replace(".hs", ".kwords"), 'rb'))
+          keyws.append(keywords)
+          pickle.dump(keyws, open(hs_file.replace(".hs", ".kwords"), 'wb'))
+        else:
+          pickle.dump(hs, open(hs_file, 'wb'))
+          pickle.dump([ID], open(hs_file.replace(".hs", ".ids"), 'wb'))
+          pickle.dump([lab], open(hs_file.replace(".hs", ".cls"), 'wb'))
+          pickle.dump([url], open(hs_file.replace(".hs", ".url"), 'wb'))
+          pickle.dump([keywords], open(hs_file.replace(".hs", ".kwords"), 'wb'))
+        doc=""
+        if e % 50 == 0:
+          print(f'{e} lines of the input document processed so far...')
+        continue
 
-# if __name__ == '__main__':
-#     args = docopt(__doc__, version='Hashing a document, ver 0.1')
 
-#     f_in = args['--docfile']
+if __name__ == '__main__':
+    args = docopt(__doc__, version='Hashing a document, ver 0.1')
 
-#     pathlib.Path('./hashes').mkdir(parents=True, exist_ok=True)
+    f_dataset = args['--docfile']
+    flyfolder = args['--flyfolder']
 
-#     folder_hs = "./hashes/"
-#     outfile_txt = open("./hashes/hs_dats.sp", 'a')
+    pathlib.Path('./hashes').mkdir(parents=True, exist_ok=True)
 
-#     docs=[]
-#     f_text=open(f_in, 'r')
-#     for line in f_text.read().splitlines():
-#       if line != "":
-#         docs.append(line)
+    with open(flyfolder+'best_val_score', 'rb') as f:  # modified the name of the fruit-fly here
+      best_fly = pickle.load(f)
 
-#     hash_a_document(docs, outfile_txt)
-with open('best_val_score', 'rb') as f:  # modified the name of the fruit-fly here
-  best_fly = pickle.load(f)
+    hash_a_document(f_dataset, best_fly)
 
-print(best_fly.projection.shape)
+
+
+
