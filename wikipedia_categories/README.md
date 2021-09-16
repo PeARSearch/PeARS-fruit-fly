@@ -1,5 +1,20 @@
 ### Download external links from wikipedia
-...
+
+We first need to extract links from a Wikipedia snapshot. To do this, we need the URLs corresponding to the many zipped files which, together, constitute the snapshot. An example Wikipedia dump can be found here: [https://dumps.wikimedia.org/enwiki/latest/](https://dumps.wikimedia.org/enwiki/latest/). Out of the many files listed on such page, we want to inspect the ones in the format *https://dumps.wikimedia.org/enwiki/latest/enwiki-latest-pages-articles1.xml-...*, which contain the actual text of the document, including Web links. So our first task is to produce a list of such XML files, which we will save in a .txt file. You can use the following script to extract a list of wiki files for the latest dump:
+
+    python3 create_wiki_dump_links.py 
+
+This will create a file *wiki_dump_links.txt* in your directory, showing one wiki URL per line. 
+
+Once we have all URLs for the Wikipedia dump, we will extract hyperlinks from the documents' content:
+
+    python3 get_external_links.py 
+
+This will take a while, as the Wikipedia dump is rather large. So get yourself a coffee! Your links will be saved in the *links* directory (one link file per Wikipedia snapshot file).
+
+At this stage, the content of the extracted links should be scraped from the Web. The scraped content is saved in the *links* directory.
+
+
 
 ### Understand the number of pages downloaded per category
 We want to understand the number of documents that have been downloaded by category. For that, we run:
@@ -25,7 +40,7 @@ Finally, after having had a look at the files returned from the previous step, w
     
 You are required to input the threshold value once the message below appears, in our example, 150:
 
-    Insert minumum frequency of ngrams (threshold): 150
+    Insert minimum frequency of ngrams (threshold): 150
     
 You can find the meta-categories and their respective categories in the file './wiki_cats/metacategories_topics.txt'. And the number of pages per meta-categories in './wiki_cats/distrib_metacategories.txt'. 
 
