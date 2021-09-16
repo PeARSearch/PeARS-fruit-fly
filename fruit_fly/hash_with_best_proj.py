@@ -110,7 +110,3 @@ if __name__ == '__main__':
       best_fly = pickle.load(f)
 
     hash_a_document(f_dataset, best_fly)
-
-
-
-
