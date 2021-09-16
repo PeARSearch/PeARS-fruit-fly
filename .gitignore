@@ -109,6 +109,7 @@ datasets/20news-bydate/
 datasets/wos/
 datasets/wikipedia/
 wikipedia_categories/wiki_cats/
+wikipedia_categories/links/*gz
 
 # models
 models/kc*
