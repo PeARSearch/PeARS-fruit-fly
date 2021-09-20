@@ -1,8 +1,10 @@
+# A map of knowledge
+
 The end goal of PeARS Fruit Fly is to provide a highly efficient algorithm for users to hash Web documents. The produced hashes are grouped in topical [pods](https://pearsproject.org/faq.html#newpods). We can think of each pod as a the index of a mini search-engine, dedicated to a particular topic.
 
 To kick off pod creation, we will provide already-seeded pods on a range of topics. We hope that more pods will be developed by end-users, expanding the knowledge range of the PeARS user base. In order to bring some order to this process, it would be useful to know the range of topics covered by Web content. This is a tall order, as it is impossible for us to know the entire Web consists of. However, we can provide some kind of 'topical grid' of human knowledge, which we will then use to order Internet content. We will create this grid from the English Wikipedia, as it is the most comprehensive knowledge repository at our disposal, publicly available and under Creative Commons license. 
 
-This project directory contains code to parse a Wikipedia snapshot, extract categories from it and link external Web documents to each category. We regard categories as topics suitable for the creation of a PeARS pod.
+This project directory contains code to parse a Wikipedia snapshot, extract categories from it and link external Web documents to each category. We regard categories as topics suitable for the creation of a PeARS pod. To learn more about the process, visit the Wiki [here](https://github.com/PeARSearch/PeARS-fruit-fly/wiki/2.2.-Generate-document-representations-using-the-fruit-fly-algorithm).
 
 
 
