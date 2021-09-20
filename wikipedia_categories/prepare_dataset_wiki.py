@@ -43,13 +43,13 @@ def metacats_with_texts(txt_files):
           except AttributeError:
             continue
         if line.startswith('<doc') == False and line.startswith('</doc>') == False:
-          doc=line
-          # print(line)
+          doc+=line+" "
+          continue
+        if line.startswith('</doc>') == True:
           if url != "" and doc != "":
             dic_url[url]=doc
             url=""
             doc=""
-          else:
             continue
 
     cat_file = txt_gz.replace("links.txt.gz", "links.gz")
@@ -115,6 +115,7 @@ def prepare_texts_labels(f_dataset, docs_dic, num_docs, num_metacats):
 def read_dataset(f_dataset):
   meta_text=[]
   with open(f_dataset,'r') as f:
+    doc=""
     for l in f:
       l = l.rstrip('\n')
       if l[:4] == "<doc":
@@ -124,7 +125,7 @@ def read_dataset(f_dataset):
         lab=m.group(1)
         continue
       if l[:5] != "</doc" and l[:4] != "<doc":
-        doc = l 
+        doc += l + " "
         continue
       if l[:5] == "</doc":
         meta_text.append((doc, ID, lab))
