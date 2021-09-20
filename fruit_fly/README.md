@@ -1,4 +1,4 @@
-# Fruit Fly algorithm (FFA) for text classification
+# A Fruit Fly algorithm (FFA) for text classification
 
 Before running the code below, make sure to have downloaded the necessary datasets. More information is available from the *datasets* directory in the main repository.
 
@@ -48,7 +48,7 @@ Wikipedia dataset:
 
 The validation scores and the combinations of hyper-parameters are stored in the log folder.
 
-### Test the best hyper-parameters on test sets
+## Test the best hyper-parameters on test sets
 
 Manually creating the best hyper-parameter settings in **models/best_models**. Please take a look in this folder for
 examples. Run:
@@ -57,16 +57,44 @@ examples. Run:
 
 to get the average score on **--test_path** for all the hyper-parameter settings in **--config_path**.
 
-## Run the evolution process
+## Results
 
-The evolution process helps to find the projection matrix and the winner-take-all rate that satisfy a pre-defined goal.
-So far, the goal is searching for a fly that performs well on the classification task (on all 3 datasets), and also
-has a small number of non-zero elements in the final hash.
+If you want to see how the FFA is doing without running the algorithm yourself, check out our results in the Wiki [here](https://github.com/PeARSearch/PeARS-fruit-fly/wiki/1.1.-Baselines).
 
-To run the evolution process:
+
+# An evolutionary algorithm for the FFA
+
+Having set up our basic FFA, we now turn to the problem of optimizing the projections inside the fly. We recall that each random projection in the architecture can be taken as capturing one semantic dimension of the document to classify. Thus, there should be better and worse projection sets, i.e. more or less discriminative ones. We propose the use of a genetic algorithm to find a fly individual with an ideal set of projections. For more information, see the Wiki page [here](https://github.com/PeARSearch/PeARS-fruit-fly/wiki/1.2-A-Genetic-Algorithm-for-optimizing-FFA).
+
+## Running the evolutionary process
+
+The evolution process helps to find the projection matrix and the winner-take-all rate that satisfy a pre-defined goal. Our goal is to find a fly that performs well on the classification task (on all 3 datasets), and also has a small number of non-zero elements in the final hash (i.e. is compact and efficient).
+
+The evolution process can be run using the following script:
 
     python -W ignore evolve_flies.py 
 
-The hyper-parameters, as well as the information in each generation can be found in a json file in *models/evolution*.
-The best flies for each criterion (best overall fitness, best average validation accuracies on 3 datasets, lowest number
-of non-zero elements, best validation accuracies on each datasets) can be found in the same directory.
+Running the above will generate a json file in *models/evolution* containing the hyperparameters used in the evolutionary process, as well as performance information for each generation of flies. As the evolutionary process takes place, the best individual flies for each criterion are saved (best overall fitness, best average validation accuracies on 3 datasets, lowest number of non-zero elements, best validation accuracies on each datasets) in the same directory. It is possible to print high-level results for the evolution process by running:
+
+    python print_best_flies.py
+
+This will return a summary of the best flies obtained for each criterion.
+
+
+
+## Running the best flies on the test sets
+
+The evolution process evaluates flies on the development sets of our three datasets. Once the best individuals have been identified, we can check their performance on the test data. To do this for a selected fly, run:
+
+    python test_evolution_model.py --fly=<selected fly>
+
+So for instance, to test the fly with the overall best fitness:
+
+    python test_evolution_model.py --fly=models/evolution/best_fitness
+
+
+## Use a fly to hash documents
+
+Finally, once the best fly has been selected, we can use it to hash documents. The code expects a file with text documents associated with a particular label.
+
+    python hash_with_best_proj.py --fly=<selected fly> --docfile=<your document file>
