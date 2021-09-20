@@ -95,7 +95,7 @@ So for instance, to test the fly with the overall best fitness:
 
 ## Use a fly to hash documents
 
-Finally, once the best fly has been selected, we can use it to hash documents. The code expects a file with text documents associated with a particular label such as our example file named 'docs_labels_example.sp' (You can use your './wiki_cats/n_metacategories.sp' document if you have already executed 'prepare_dataset_wiki.py' in 'wikipedia_categories'). Then, run the code below with the selected fly from the evolution process and find the output in the 'hashes' folder.
+Finally, once the best fly has been selected, we can use it to hash documents. The code expects a file with text documents associated with a particular label such as our example file named 'docs_labels_example.txt' (You can use your './wiki_cats/n_metacategories.txt' document if you have already executed 'prepare_dataset_wiki.py' in 'wikipedia_categories'). Then, run the code below with the selected fly from the evolution process and find the output in the 'hashes' folder.
 
     python hash_with_best_proj.py --fly=<selected fly> --docfile=docs_labels_example.txt
 

@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
     txt_files = glob.glob(linksfolder+"*links.txt.gz")
 
-    f_dataset = f"./wiki_cats/{num_metacats}_wikimetacats.sp"
+    f_dataset = f"./wiki_cats/{num_metacats}_wikimetacats.txt"
 
     if not os.path.isfile(f_dataset):
       docs_cat = metacats_with_texts(txt_files)  #pickle.load(open('dic_cat.p', 'rb'))
