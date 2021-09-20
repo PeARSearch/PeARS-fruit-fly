@@ -95,6 +95,8 @@ So for instance, to test the fly with the overall best fitness:
 
 ## Use a fly to hash documents
 
-Finally, once the best fly has been selected, we can use it to hash documents. The code expects a file with text documents associated with a particular label.
+Finally, once the best fly has been selected, we can use it to hash documents. The code expects a file with text documents associated with a particular label such as our example file named 'docs_labels_example.sp' (You can use your './wiki_cats/n_metacategories.sp' document if you have already executed 'prepare_dataset_wiki.py' in 'wikipedia_categories'). Then, run the code below with the selected fly from the evolution process and find the output in the 'hashes' folder.
 
-    python hash_with_best_proj.py --fly=<selected fly> --docfile=<your document file>
+    python hash_with_best_proj.py --fly=<selected fly> --docfile=docs_labels_example.txt
+
+The outputs are pickle files containing the hash (.hs), the keywords (.kwords), id (.ids), label (.cls) and finally, url (.url) of each document. The information from each web document is grouped by label, meaning that each pickle file contains a given type of information (e.g. hash, url,...) of all documents belonging to the same label. 
