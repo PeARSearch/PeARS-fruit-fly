@@ -24,54 +24,120 @@ from nltk.util import ngrams
 from nltk.tokenize import word_tokenize
 import re
 import os
+import pathlib
 nltk.download('punkt')
 nltk.download('stopwords')
  
 stop_words = set(stopwords.words('english'))
 
-def count_categories(txt_files):
+def save_dataset(dic_cat, f_urls_docs):
+  f_out=open(f_urls_docs, 'w')
+  for k, v in dic_cat.items():
+    f_out.write("<doc url="+k+" categories="+"|".join(list(v[1]))+">\n")
+    f_out.write(v[0]+'\n')
+    f_out.write("</doc>\n")
+  f_out.close()
+
+def connect_cats_text(txt_files, f_urls_docs):
 	"""
 	Reads the categories that have extracted with Wikipedia's external links.
 	Returns a .txt file with the distribution of categories. 
 	"""
 	dic_url={}
 	dic_cat={}
-	pattern_url = "url='(.*?)'>"
 	for txt_gz in txt_files:
+		doc=""
 		with gzip.open(txt_gz,'rt') as f:
-			for line in f.read().splitlines():
-				if "url='" in line:
+			for l in f:
+				l=l.rstrip("\n")
+				if l[:4] == "<doc":
 					try:
-						url = re.search(pattern_url, line).group(1)
-						dic_url[url]=0
-					except AttributeError:
+						m=re.search(r"(?<=url=')(.*)(?=')", l)
+						url=m.group(1)
 						continue
-
+					except AttributeError:
+						url=""
+						continue
+				if l[:5] != "</doc" and l[:4] != "<doc":
+					doc += l + " "
+					continue
+				if l[:5] == "</doc" and doc != "":
+					if url == "":
+						doc=""
+						continue
+					else:
+						dic_url[url]=doc.rstrip(" ")
+						doc=""
+						url=""
+						continue
+	# print(dic_url.keys())
+	urls=set()
+	for txt_gz in txt_files:	
 		cat_file = txt_gz.replace("links.txt.gz", "links.gz")
 		with gzip.open(cat_file,'rt') as f:
-			for line in f.read().splitlines():
+			for line in f:
+				line=line.rstrip("\n")
 				line=line.split("|")
-				if line[0] in dic_url.keys():
+				url=line[0]
+				if line[1:]==['']:
+					continue
+				cats=set()
+				if url in dic_url.keys():  #line[0] is the url
 					for cat in line[1:]:
 						cat=cat.lower()
-						if re.match(r"[A-Za-z0-9]+", cat):
-							if cat not in dic_cat.keys():
-								dic_cat[cat]=1
-							else:
-								dic_cat[cat]+=1
-	
-	cats=Counter(dic_cat)
-	most = cats.most_common(len(cats.keys()))
+						cats.add(cat)
+						
+					if url in dic_cat.keys():
+						old_cats=dic_cat[url][1]
+						cats.update(old_cats)
+						dic_cat[url]=(dic_url[url], cats)
+					else:
+							dic_cat[url]=(dic_url[url], cats)
+			
+	# os.unlink(f_urls_docs)
+	if not os.path.isfile(f_urls_docs): 
+		save_dataset(dic_cat, f_urls_docs)
 
-	with open('./wiki_cats/distrib_categories.txt', 'w') as f:
-		for t in most:
-			f.write(t[0]+"\t"+str(t[1])+'\n')
-	f.close()
-	print("Find categories reverse sorted in './wiki_cats/distrib_categories.txt'")
+
+def count_categories(f_urls_docs):
+  cats_url=defaultdict(list)
+  with open(f_urls_docs,'r') as f:
+    doc=""
+    for l in f:
+      l = l.rstrip('\n')
+      if l[:4] == "<doc":
+        m = re.search(".*url=([^ ]*) ",l)
+        url=m.group(1)
+        m=re.search(r"(?<=categories=)(.*)(?=>)", l)
+        cats=m.group(1)
+        cats=cats.split("|")
+        continue
+      if l[:5] != "</doc" and l[:4] != "<doc":
+        doc += l + " "
+        continue
+      if l[:5] == "</doc":
+      	for cat in cats:
+      		if cat not in cats_url:
+      			cats_url[cat]=1
+      		else:
+      			cats_url[cat]+=1
+      	doc=""
+      	url=""
+      	cats=""
+      	continue
+    f.close()
+
+  cats=Counter(cats_url)
+  most = cats.most_common(len(cats.keys()))
+  with open('./wiki_cats/distrib_categories.txt', 'w') as f:
+  	for t in most:
+  		f.write(t[0]+"\t"+str(t[1])+'\n')
+  f.close()
+  print("Find categories reverse sorted in './wiki_cats/distrib_categories.txt'")
 
 def read_categories():
 	cats=[]
-	print("Reading categories...")
+	print("Loading categories...")
 	with open('./wiki_cats/distrib_categories.txt', 'r') as f:
 		for line in f.read().splitlines():
 			line=line.split("\t")
@@ -130,7 +196,8 @@ def create_metacategories(threshold):
 					for i in set(dic[k[0]]):
 						if i not in ignore_cats:
 							add_.add(i)
-					f.write("|".join(add_)+'\n')
+					if len(add_)>1:
+						f.write("|".join(add_)+'\n')
 				ignore_cats.update(add_)
 	f.close()
 	pickle.dump(ignore_cats, open("./wiki_cats/ignore_cats.p", 'wb'))
@@ -182,60 +249,80 @@ def dic_metacategories(fname):
 	f_in.close()
 	return dic_meta
 
-def distribution_metacategories():
-	"""
-	Takes the folder where the links.gz and links.txt.gz are and the .txt file where 
-	the meta-categories and their respective categories are. 
+def distribution_metacategories(f_urls_docs, save):
+	""" 
 	Returns a .txt file with the distribution of the meta-categories of the dataset 
 	extracted from Wikipedia's external links.
 	"""
-	cats = read_categories()
-	meta_cats = dic_metacategories('./wiki_cats/metacategories_topics.txt')
-	final_cats=defaultdict(list)
-	
-	for cat in cats:
-		if cat[0] in meta_cats.keys():
-			if meta_cats[cat[0]] not in final_cats.keys():
-				final_cats[meta_cats[cat[0]]]=int(cat[1])
-			else:
-				final_cats[meta_cats[cat[0]]]+=int(cat[1])
+	dic_metacats=dic_metacategories('./wiki_cats/metacategories_topics.txt')
+	docs_dic=defaultdict(set)
+	with open(f_urls_docs,'r') as f:
+		doc=""
+		for l in f:
+			l = l.rstrip('\n')
+			if l[:4] == "<doc":
+				m = re.search(".*url=([^ ]*) ",l)
+				url=m.group(1)
+				m=re.search(r"(?<=categories=)(.*)(?=>)", l)
+				cats=m.group(1)
+				cats=cats.split("|")
+				continue
+			if l[:5] != "</doc" and l[:4] != "<doc":
+				doc += l + " "
+				continue
+			if l[:5] == "</doc":
+				for cat in cats:
+					if cat in dic_metacats.keys():
+						docs_dic[dic_metacats[cat]].add((doc, url))
+				doc=""
+				url=""
+				cats=""
+				continue
+		f.close()
 
-	cats=Counter(final_cats)
-	most = cats.most_common(len(cats.keys()))
+	if save=="True":
+		count_dic={}
+		for k in docs_dic.keys():
+			count_dic[k]=len(docs_dic[k])
+		count_dic=dict(sorted(count_dic.items(), key = lambda x: x[1], reverse=True))
 
-	with open('./wiki_cats/distrib_metacategories.txt', 'w') as f:
-		for t in most:
-			f.write(t[0]+"\t"+str(t[1])+'\n')
-	f.close()
-	print("Find the distribution of pages extracted per metacategory in './wiki_cats/distrib_metacategories.txt'")
+		with open('./wiki_cats/distrib_metacategories.txt', 'w') as f:
+			for met, n in count_dic.items():
+				f.write(met+"\t"+str(n)+'\n')
+		f.close()
+		print("Find the distribution of pages extracted per metacategory in './wiki_cats/distrib_metacategories.txt'")
+	return docs_dic
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Understanding and filtering Wikipedia categories, ver 0.1')
     linksfolder=args['--linksfolder']
     function = int(args["--function"])
 
-    txt_files = glob.glob(linksfolder+"*links.txt.gz")
+    pathlib.Path('./wiki_cats').mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists("wiki_cats"):
-    	os.makedirs("wiki_cats")
+    txt_files = glob.glob(linksfolder+"*links.txt.gz")
+    f_urls_docs="./wiki_cats/connect_cats_text.txt"
 
     if function==0:
-    	count_categories(txt_files)
+    	connect_cats_text(txt_files, f_urls_docs)
+    	count_categories(f_urls_docs)
 
     if function == 1:
     	if not os.path.isfile("./wiki_cats/distrib_categories.txt"):
-    		count_categories(txt_files)
+    		connect_cats_text(txt_files, f_urls_docs)
+    		count_categories(f_urls_docs)
     	ngram_n = int(input("Insert 1 for unigrams, 2 for bigrams, 3 for trigrams, and so forth: "))
     	create_ngrams(ngram_n)
 
     if function == 2:
     	if not os.path.isfile("./wiki_cats/distrib_categories.txt"):
-    		count_categories(txt_files)
+    		connect_cats_text(txt_files, f_urls_docs)
+    		count_categories(f_urls_docs)
     	if glob.glob("./wiki_cats/ngram*.p") == []:
     		print("\nERROR: You have to run function=1 first.\n")
     		exit()
 
     	threshold = int(input("Insert minumum frequency of ngrams (threshold): "))	   
-    	create_metacategories(threshold)
-    	name_metacategories()
-    	distribution_metacategories()
+    	#create_metacategories(threshold)
+    	#name_metacategories()
+    	distribution_metacategories(f_urls_docs, "True")

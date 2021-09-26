@@ -1,5 +1,6 @@
 births
 deaths
+21st-century-american
 20th-century-american
 united-states
 groups
@@ -18,3 +19,7 @@ united-nations
 north-carolina
 grade-ii*-listed
 new-jersey
+women's
+children's
+men's
+american-male
