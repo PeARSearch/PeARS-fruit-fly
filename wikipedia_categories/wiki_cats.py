@@ -323,6 +323,6 @@ if __name__ == '__main__':
     		exit()
 
     	threshold = int(input("Insert minumum frequency of ngrams (threshold): "))	   
-    	#create_metacategories(threshold)
-    	#name_metacategories()
+    	create_metacategories(threshold)
+    	name_metacategories()
     	distribution_metacategories(f_urls_docs, "True")
