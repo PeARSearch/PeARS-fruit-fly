@@ -1,7 +1,7 @@
 """Hash documents with selected fly
 
 Usage:
-  hash_with_best_proj.py --docfile=<filename> --flyfolder=<foldername>
+  hash_with_best_proj.py --docfile=<filename> --fly=<pathfly>
   hash_with_best_proj.py (-h | --help)
   hash_with_best_proj.py --version
 Options:
@@ -27,10 +27,10 @@ import pathlib
 from docopt import docopt
 import glob
 import re
+from collections import defaultdict
 from hash import wta, return_keywords
 
 def hash_documents(f_dataset, best_fly):
-
   top_words = 250
   C = 100
   num_iter = 2000  # wikipedia and wos only need 50 steps
@@ -38,21 +38,23 @@ def hash_documents(f_dataset, best_fly):
   sp.load('../spmcc.model')
   vocab, reverse_vocab, logprobs = read_vocab()
   vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
-  new_ids, new_labels, new_urls, new_keywords, hashes= [np.array([])]*5
   doc=""
+  c=0
+  dic_labs={}
   with open(f_dataset,'r') as f:
     for l in f:
       l = l.rstrip('\n')
       if l[:4] == "<doc":
-        m = re.search(".*id=([^ ]*) ",l)
-        ID=m.group(1)
-        new_ids = np.append(new_ids, ID)
         m = re.search(".*class=([^ ]*)>",l)
         lab=m.group(1)
-        new_labels = np.append(new_labels, lab)
+        if lab not in dic_labs.keys():
+          dic_labs[lab]=defaultdict(list)
+        m = re.search(".*id=([^ ]*) ",l)
+        ID=m.group(1)
+        dic_labs[lab]['ids'].append(ID)
         m = re.search(".*url=([^ ]*) ",l)
         url=m.group(1)
-        new_urls = np.append(new_urls, url)
+        dic_labs[lab]['urls'].append(url)
         continue
 
       if l[:5] != "</doc" and l[:4] != "<doc":
@@ -64,47 +66,44 @@ def hash_documents(f_dataset, best_fly):
         X = vectorizer.fit_transform([" ".join(ll)])
         X = csr_matrix(X)
         X = X.multiply(logprobs)
-        hashes = np.append(hashes, X)
+        dic_labs[lab]['X'].append(X)
         vec = wta(X.toarray()[0], top_words, percent=False)
         kwds = [reverse_vocab[w] for w in return_keywords(vec)]
-        new_keywords = np.append(new_keywords, kwds)
+        dic_labs[lab]['keywords'].append(kwds)
         doc=""
+        c+=1
+        if c % 200 == 0:
+          print(f"{c} documents processed so far...")
         continue
 
   print("Start hashing...")
-  hashes = hash_dataset_(dataset_mat=vstack(hashes), weight_mat=best_fly.projection,
+  for e, lab in enumerate(dic_labs.keys()):
+    Xs = vstack(np.array(dic_labs[lab]['X']))
+    # print("Xs", Xs.shape, len(dic_labs[lab]['X']))
+    hashes = hash_dataset_(dataset_mat=Xs, weight_mat=best_fly.projection,
                      percent_hash=best_fly.wta, top_words=top_words)
-  print("Saving information...")
-  for e, lab in enumerate(set(new_labels)):
-    indices=[idx for idx, element in enumerate(new_labels) if element == lab]
-    new_hs_mat = vstack(hashes[indices])
 
     hs_file='./hashes/'+lab+".hs"
     if hs_file in glob.glob('./hashes/*.hs'):
       hs_mat = pickle.load(open(hs_file, 'rb'))
-      # print(hs_file)
-      hs_matrix = vstack([hs_mat, new_hs_mat])
-      pickle.dump(hs_mat, open(hs_file, 'wb'))
+      hs_matrix = vstack([hs_mat, hashes])
+      pickle.dump(hs_matrix, open(hs_file, 'wb'))
       ids = pickle.load(open(hs_file.replace(".hs", ".ids"), 'rb'))
-      ids = np.append(ids, new_ids[indices])
+      ids = np.append(ids, np.array(dic_labs[lab]['ids']))
       pickle.dump(ids, open(hs_file.replace(".hs", ".ids"), 'wb'))
-      labels = pickle.load(open(hs_file.replace(".hs", ".cls"), 'rb'))
-      labels = np.append(labels, new_labels[indices])
-      pickle.dump(labels, open(hs_file.replace(".hs", ".cls"), 'wb'))
       urls = pickle.load(open(hs_file.replace(".hs", ".url"), 'rb'))
-      urls = np.append(urls, new_urls[indices])
+      urls = np.append(urls, np.array(dic_labs[lab]['urls']))
       pickle.dump(urls, open(hs_file.replace(".hs", ".url"), 'wb'))
       keyws = pickle.load(open(hs_file.replace(".hs", ".kwords"), 'rb'))
-      keyws = np.append(keyws, new_keywords[indices])
+      keyws = np.append(keyws, np.array(dic_labs[lab]['keywords']))
       pickle.dump(keyws, open(hs_file.replace(".hs", ".kwords"), 'wb'))
     else:
-      pickle.dump(new_hs_mat, open(hs_file, 'wb'))
-      pickle.dump(new_ids[indices], open(hs_file.replace(".hs", ".ids"), 'wb'))
-      pickle.dump(new_labels[indices], open(hs_file.replace(".hs", ".cls"), 'wb'))
-      pickle.dump(new_urls[indices], open(hs_file.replace(".hs", ".url"), 'wb'))
-      pickle.dump(new_keywords[indices], open(hs_file.replace(".hs", ".kwords"), 'wb'))
-    if e % 10 == 0:
-      print(f'{e} new categories saved out of {len(set(new_labels))}...')
+      pickle.dump(hashes, open(hs_file, 'wb'))
+      pickle.dump(np.array(dic_labs[lab]['ids']), open(hs_file.replace(".hs", ".ids"), 'wb'))
+      pickle.dump(np.array(dic_labs[lab]['urls']), open(hs_file.replace(".hs", ".url"), 'wb'))
+      pickle.dump(np.array(dic_labs[lab]['keywords']), open(hs_file.replace(".hs", ".kwords"), 'wb'))
+    if e % 20 == 0:
+      print(f'{e} categories saved with hashes...')
 
 
 if __name__ == '__main__':
