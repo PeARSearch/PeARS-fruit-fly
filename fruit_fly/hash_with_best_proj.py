@@ -1,7 +1,7 @@
 """Hash documents with selected fly
 
 Usage:
-  hash_with_best_proj.py --fly=<selected fly> --docfile=<filename>
+  hash_with_best_proj.py --docfile=<filename> --fly=<pathfly>
   hash_with_best_proj.py (-h | --help)
   hash_with_best_proj.py --version
 Options:
