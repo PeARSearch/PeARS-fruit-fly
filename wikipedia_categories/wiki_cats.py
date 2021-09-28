@@ -18,6 +18,7 @@ import gzip
 import glob
 from collections import Counter, defaultdict
 import pickle
+import string
 import nltk
 from nltk.corpus import stopwords
 from nltk.util import ngrams
@@ -154,14 +155,13 @@ def create_ngrams(ngram_n):
 	ngrams_l=[]
 	dic=defaultdict(list)
 	for cat in cats:
+		cat=cat.translate(str.maketrans('', '', string.punctuation))
 		token = word_tokenize(cat)
 		token = [i for i in token if i not in stop_words]
-		gram = list(ngrams(token, ngram_n)) 
-		try:
-			ngrams_l.append(gram[0])
-			dic[gram[0]].append(cat)
-		except IndexError:
-			pass
+		grams = list(ngrams(token, ngram_n)) 
+		for gram in grams:
+		  ngrams_l.append(gram)
+		  dic[gram].append(cat)
 	fdist = nltk.FreqDist(ngrams_l)
 	sort_orders = sorted(fdist.items(), key=lambda x: x[1], reverse=True)
 	pickle.dump(sort_orders, open("./wiki_cats/ngram"+str(ngram_n)+".p", 'wb'))
@@ -209,7 +209,10 @@ def name_metacategories():
 	"""
 	f_in=open('./wiki_cats/metacategories.txt', 'r')
 	f_out=open('./wiki_cats/metacategories_topics.txt', 'w')
-	for line in f_in.read().splitlines():
+	line_estab=""
+	line_fungi=""
+	for line in f_in:
+		line=line.rstrip('\n')
 		li=line.replace("|", " ")
 		li=li.split(" ")
 		for l in li: 
@@ -225,8 +228,21 @@ def name_metacategories():
 		for c in comm:
 			if c[1]>=max_f*0.8 and c[0]!='the':
 				tops.append(c[0])
-		f_out.write("MAIN TOPIC:\t"+"-".join(tops)+'\n')
-		f_out.write("CATEGORIES:\t"+line+'\n')
+			if 'fungi' in tops:
+				line_fungi+=line+"|"
+				tops=[]
+			if 'establishments' in tops:
+				line_estab+=line+"|"
+				tops=[]
+		if len(tops) > 0:
+			f_out.write("MAIN TOPIC:\t"+"-".join(tops)+'\n')
+			f_out.write("CATEGORIES:\t"+line+'\n')
+	if line_fungi != "":
+		f_out.write("MAIN TOPIC:\tfungi\n")
+		f_out.write("CATEGORIES:\t"+line_fungi+'\n')
+	if line_estab != "":
+		f_out.write("MAIN TOPIC:\testablishments\n")
+		f_out.write("CATEGORIES:\t"+line_estab+'\n')
 	f_out.close()
 	print("Find the meta-categories with their respective categories in './wiki_cats/metacategories_topics.txt'")
 
