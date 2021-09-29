@@ -1,13 +1,11 @@
 """Dataset preparation for wikipedia meta-categories and their respective webpage documents.
 Usage:
-  prepare_dataset_wiki.py --linksfolder=<foldername> --num_docs=<integer> --num_metacats=<integer>
+  prepare_dataset_wiki.py --num_docs=<integer> --num_metacats=<integer>
   prepare_dataset_wiki.py (-h | --help)
   prepare_dataset_wiki.py --version
 Options:
   -h --help                       Show this screen.
   --version                       Show version.
-  --linksfolder=<foldername>      Name of folder where the wikipedia external links and their 
-                                  respective pages have been placed
   --num_docs=<integer>            Number of documents to keep per meta-category
   --num_metacats=<integer>        Number of metacatories to keep                        
 """
@@ -20,48 +18,8 @@ import gzip
 import re
 from collections import defaultdict
 import pickle
-import wiki_cats
+from wiki_cats import dic_metacategories, distribution_metacategories
 from docopt import docopt
-
-def metacats_with_texts(txt_files):
-  '''
-  Returns a dictionary with category as key and a list of texts belonging to the respective
-  meta-category as value. 
-  '''
-  dic_metacats=wiki_cats.dic_metacategories('./wiki_cats/metacategories_topics.txt')
-  dic_url={}
-  docs_dic=defaultdict(list)
-  pattern_url = "url='(.*?)'>"
-  for txt_gz in txt_files:
-    with gzip.open(txt_gz,'rt') as f:
-      url=""
-      doc=""
-      for line in f.read().splitlines():
-        if "url='" in line:
-          try:
-            url = re.search(pattern_url, line).group(1)
-          except AttributeError:
-            continue
-        if line.startswith('<doc') == False and line.startswith('</doc>') == False:
-          doc=line
-          # print(line)
-          if url != "" and doc != "":
-            dic_url[url]=doc
-            url=""
-            doc=""
-          else:
-            continue
-
-    cat_file = txt_gz.replace("links.txt.gz", "links.gz")
-    with gzip.open(cat_file,'rt') as f:
-      for line in f.read().splitlines():
-        line=line.split("|")
-        if line[0] in dic_url.keys():
-          for cat in line[1:]:
-            cat=cat.lower()
-            if re.match(r"[A-Za-z0-9]+", cat) and cat in dic_metacats.keys():
-              docs_dic[dic_metacats[cat]].append((dic_url[line[0]], line[0]))
-  return docs_dic
 
 
 def save_dataset(meta_text, f_dataset):
@@ -86,20 +44,20 @@ def prepare_texts_labels(f_dataset, docs_dic, num_docs, num_metacats):
   f_disc.close()
   
   f_meta=open('./wiki_cats/distrib_metacategories.txt', 'r')
-  metacats=[]
-  for line in f_meta.read().splitlines():
-    line=line.split('\t')
+  metacats=set()
+  for line in f_meta:
+    line=line.rstrip('\n').split('\t')
     if line[0] not in discard:
-      metacats.append(line[0])
-      if len(metacats)>=num_metacats:
+      metacats.add(line[0])
+      if len(metacats)>=num_metacats: # 160
         break
   f_meta.close()
   print("LENGTH metacategories:", len(metacats))
 
   meta_text=[]
-  for meta in docs_dic.keys():
-    if meta in metacats:
-      if len(docs_dic[meta])>num_docs:
+  for meta in metacats:
+    if meta in docs_dic.keys():
+      if len(docs_dic[meta])>num_docs:  #1000
         docs = random.sample(docs_dic[meta], num_docs)
       else:
         docs = random.sample(docs_dic[meta], len(docs_dic[meta]))
@@ -107,14 +65,14 @@ def prepare_texts_labels(f_dataset, docs_dic, num_docs, num_metacats):
         meta_text.append((doc[0], doc[1], meta))  #doc[1] is the url of the document
 
   meta_text=random.sample(meta_text, len(meta_text)) 
-  if not os.path.isfile(f_dataset):
-    save_dataset(meta_text, f_dataset)
+  save_dataset(meta_text, f_dataset)
 
   return meta_text
 
 def read_dataset(f_dataset):
   meta_text=[]
   with open(f_dataset,'r') as f:
+    doc=""
     for l in f:
       l = l.rstrip('\n')
       if l[:4] == "<doc":
@@ -124,7 +82,7 @@ def read_dataset(f_dataset):
         lab=m.group(1)
         continue
       if l[:5] != "</doc" and l[:4] != "<doc":
-        doc = l 
+        doc += l + " "
         continue
       if l[:5] == "</doc":
         meta_text.append((doc, ID, lab))
@@ -187,11 +145,6 @@ def output_wordpieces(f_dataset, train_p, val_p):
     f.write(str(n_train) + ' ' + str(n_val) + ' ' + str(n_test)+'\n')
   f.close()
 
-def wikipedia_cats(f_dataset):
-
-    output_wordpieces(f_dataset, train_p=0.6, val_p=0.2)
-    print('Datasets ready to be used for the classification...')
-
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Prepare dataset of wikipedia s externial links, ver 0.1')
@@ -200,16 +153,15 @@ if __name__ == '__main__':
     sp = spm.SentencePieceProcessor()
     sp.load('../spmcc.model')
 
-    linksfolder=args['--linksfolder']
     num_docs=int(args['--num_docs'])
     num_metacats=int(args['--num_metacats'])
 
-    txt_files = glob.glob(linksfolder+"*links.txt.gz")
+    f_dataset = f"./wiki_cats/{num_metacats}_wikimetacats.txt"
+    f_urls_docs="./wiki_cats/connect_cats_text.txt"
 
-    f_dataset = f"./wiki_cats/{num_metacats}_wikimetacats.sp"
+    docs_cat = distribution_metacategories(f_urls_docs, "False")
+    meta_text = prepare_texts_labels(f_dataset, docs_cat, num_docs, num_metacats)
+    output_wordpieces(f_dataset, train_p=0.6, val_p=0.2)
 
-    if not os.path.isfile(f_dataset):
-      docs_cat = metacats_with_texts(txt_files)  #pickle.load(open('dic_cat.p', 'rb'))
-      meta_text = prepare_texts_labels(f_dataset, docs_cat, num_docs, num_metacats)
+    print('Datasets ready to be used for the classification...')
 
-    wikipedia_cats(f_dataset)
