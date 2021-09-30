@@ -30,7 +30,7 @@ URL = "https://en.wikipedia.org/w/api.php"
 
 categories = read_categories(metacat_dir)
 
-for cat_dir in categories[:1]:
+for cat_dir in categories:
     print("Processing category",cat_dir)
     title_file = os.path.join(cat_dir,"titles.txt")
     IDs, titles = read_titles(title_file)

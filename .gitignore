@@ -108,10 +108,10 @@ venv.bak/
 datasets/20news-bydate/
 datasets/wos/
 datasets/wikipedia/
-wikipedia_categories/wiki_cats/
+wikipedia_categories/metacat_eval/wiki_cats/
+wikipedia_categories/metacat_eval/links/*gz
 wikipedia_categories/pod_starter/wiki_cats/
 wikipedia_categories/pod_starter/hashes/
-wikipedia_categories/links/*gz
 
 # models
 models/kc*

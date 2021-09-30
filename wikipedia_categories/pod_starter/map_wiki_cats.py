@@ -2,12 +2,13 @@
 Wikipedia's external links
 
 Usage:
-  map_wiki_cats.py
+  map_wiki_cats.py --cats=<path>
   map_wiki_cats.py (-h | --help)
   map_wiki_cats.py --version
 Options:
   -h --help                       Show this screen.
   --version                       Show version.
+  --cats=<path>                   Path to your preprocessed Wikipedia category file.
 
 """
 from docopt import docopt
@@ -26,10 +27,10 @@ import os
 stop_words = set(stopwords.words('english'))
 meta_classes = ["Wikipedia","Articles","Category","Templates","Stubs","A-Class","B-Class","C-Class","Draft-Class","Stub-Class","List-Class","Start-Class","WikiProject","Low-Importance","Mid-Importance","High-Importance","redirects","infobox","files","Wikipedians"]
 
-def read_categories():
+def read_categories(cat_file):
 	cats=[]
 	print("Reading categories...")
-	with open('./data/preprocessed_wiki_categories.txt', 'r') as f:
+	with open(cat_file, 'r') as f:
 	    for line in f.read().splitlines():
 	        cats.append((line, "0"))
 	f.close()
@@ -46,12 +47,11 @@ def get_ngram_list(txt, ngram_n):
     all_ngrams = list(ngrams(tokens, ngram_n))
     return all_ngrams
 
-def create_ngrams(ngram_n):
+def create_ngrams(cats,ngram_n):
     """
     Returns a .txt file with the ngrams and their frequency in the categories. 
     """
     print("\nComputing ngrams of size",ngram_n)
-    cats=read_categories()
     cats=[i[0] for i in cats if i[0]!=""]
     ngrams_l=[]
     dic=defaultdict(list)
@@ -80,7 +80,7 @@ def create_metacategories(threshold):
     Takes the threshold of the frequency of the ngrams. 
     Returns a .txt file with categories that belong to the same meta-category in each line.
     """
-    print("Creating metacategories")
+    print("\nCreating metacategories")
     if os.path.isfile("./wiki_cats/ignore_cats.p"):
         ignore_cats=pickle.load(open("./wiki_cats/ignore_cats.p", 'rb'))
     else:
@@ -111,6 +111,7 @@ def name_metacategories():
     Takes the .txt file where the categories have been divided by line
     Return a .txt file with the name of the meta-categories and their repective categories.
     """
+    metacategories = []
     f_in=open('./wiki_cats/metacategories.txt', 'r')
     f_out=open('./wiki_cats/metacategories_topics.txt', 'w')
     for line in f_in.read().splitlines():
@@ -127,71 +128,30 @@ def name_metacategories():
             tops = [p[0] for p in comm if p[1] > 0.99 * len(cats)]
             if len(tops) > 0:
                 name_found = True
+                metacategories.extend(tops)
                 f_out.write("TOPICS: "+" | ".join(tops)+'\t')
                 f_out.write("CATEGORIES: "+line+'\n')
             else:
                 ngram_n-=1
     f_out.close()
     f_in.close()
-    print("Find the meta-categories with their respective categories in './wiki_cats/metacategories_topics.txt'")
 
-def dic_metacategories(fname):
-	"""
-	Takes the .txt file where the meta-categories and their respective categories are. 
-	Returns a dictionary with the categories as keys and the metacategories as values
-	"""
-	dic_meta={}
-	f_in=open(fname, 'r')
-	for line in f_in.read().splitlines():
-		if line.startswith("MAIN"):
-			metacat=line.split("\t")[1]
-			continue
-		if line.startswith("CATEGORIES"):
-			cats=line.split("\t")[1]
-			cats=cats.split('|')
-			for cat in cats:
-				dic_meta[cat]=metacat
-	f_in.close()
-	return dic_meta
+    # Rewrite metacategories.txt with just category names
+    f_out=open('./wiki_cats/metacategories.txt', 'w')
+    for m in metacategories:
+        f_out.write(m+'\n')
+    f_out.close()
+    print("\n You will find your meta-category names in './wiki_cats/metacategories.txt'")
 
-def distribution_metacategories():
-	"""
-	Takes the folder where the links.gz and links.txt.gz are and the .txt file where 
-	the meta-categories and their respective categories are. 
-	Returns a .txt file with the distribution of the meta-categories of the dataset 
-	extracted from Wikipedia's external links.
-	"""
-	cats = read_categories()
-	meta_cats = dic_metacategories('./wiki_cats/metacategories_topics.txt')
-	final_cats=defaultdict(list)
-	
-	for cat in cats:
-		if cat[0] in meta_cats.keys():
-			if meta_cats[cat[0]] not in final_cats.keys():
-				final_cats[meta_cats[cat[0]]]=int(cat[1])
-			else:
-				final_cats[meta_cats[cat[0]]]+=int(cat[1])
 
-	cats=Counter(final_cats)
-	most = cats.most_common(len(cats.keys()))
-
-	with open('./wiki_cats/distrib_metacategories.txt', 'w') as f:
-		for t in most:
-			f.write(t[0]+"\t"+str(t[1])+'\n')
-	f.close()
-	print("Find the distribution of pages extracted per metacategory in './wiki_cats/distrib_metacategories.txt'")
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Understanding and filtering Wikipedia categories, ver 0.1')
-
+    cat_file = args['--cats']
     
-    if os.path.exists("./wiki_cats"):
-        shutil.rmtree("./wiki_cats")
-    os.makedirs("./wiki_cats")
-
+    cats=read_categories(cat_file)
     for i in [2,3,4,5,6]:
-        create_ngrams(i)
+        create_ngrams(cats,i)
 
     create_metacategories(10)
     name_metacategories()
-    #distribution_metacategories()

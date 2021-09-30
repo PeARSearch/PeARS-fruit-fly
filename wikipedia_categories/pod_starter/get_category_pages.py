@@ -19,8 +19,8 @@ def read_categories(metacat):
         topics,cats = l.split('\t')
         for topic in topics[8:].split('|'):
             if topic == metacat:
-                categories.extend(cats.split('|'))
-    return categories
+                categories.extend([c for c in cats.split('|') if "CATEGORIES" not in c])
+    return list(set(categories))
 
 
 
@@ -35,7 +35,7 @@ print(categories)
 
 
 for cat in categories:
-    cat_dir = os.path.join("data/categories/",metacat_dir,cat.replace(' ','_'))
+    cat_dir = os.path.join(metacat_dir,cat.replace(' ','_'))
     if not os.path.isdir(cat_dir):
         os.mkdir(cat_dir)
     title_file = open(os.path.join(cat_dir,"titles.txt"),'w')
@@ -45,7 +45,7 @@ for cat in categories:
         "list": "categorymembers",
         "format": "json",
         "cmtitle": "Category:"+cat,
-        "cmlimit": "100"
+        "cmlimit": "20"
     }
 
     for i in range(1):    #increase 1 to more to get additional data
