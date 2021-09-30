@@ -24,6 +24,9 @@ def read_categories(metacat):
 
 
 
+if not os.path.isdir("./data"):
+    os.mkdir("./data")
+
 
 metacat = input("Please enter a category name: ")
 metacat_dir = "./data/categories/"+metacat.replace(' ','_')

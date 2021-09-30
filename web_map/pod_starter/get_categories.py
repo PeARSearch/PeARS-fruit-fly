@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-
 import requests
+import os
 import re
 
 S = requests.Session()
@@ -16,7 +16,9 @@ PARAMS = {
     "aclimit": 500
 }
 
-f = open("wiki_categories.txt",'w')
+
+
+f = open("./wiki_cats/wiki_categories.txt",'w')
 
 for i in range(100):
     R = S.get(url=URL, params=PARAMS)
