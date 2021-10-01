@@ -72,7 +72,7 @@ The evolution process helps to find the projection matrix and the winner-take-al
 
 The evolution process can be run using the following script:
 
-    python -W ignore evolve_flies.py 
+    python -W ignore evolve_growing_flies.py 
 
 Running the above will generate a json file in *models/evolution* containing the hyperparameters used in the evolutionary process, as well as performance information for each generation of flies. As the evolutionary process takes place, the best individual flies for each criterion are saved (best overall fitness, best average validation accuracies on 3 datasets, lowest number of non-zero elements, best validation accuracies on each datasets) in the same directory. It is possible to print high-level results for the evolution process by running:
 
@@ -80,6 +80,7 @@ Running the above will generate a json file in *models/evolution* containing the
 
 This will return a summary of the best flies obtained for each criterion.
 
+**NB:** the directory also contains the script *evolve_flies.py*, which is a version of the GA without KC layer expansion. We recommend the use of *evolve_growing_flies.py* for obtaining the most compact representations possible (see [wiki](https://github.com/PeARSearch/PeARS-fruit-fly/wiki/1.2-A-Genetic-Algorithm-for-optimizing-FFA) for details).
 
 
 ## Running the best flies on the test sets
