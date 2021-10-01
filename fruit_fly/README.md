@@ -102,4 +102,4 @@ Finally, once the best fly has been selected, we can use it to hash documents. T
 
 The outputs are pickle files containing the hash (.hs), the keywords (.kwords), id (.ids), label (.cls) and finally, url (.url) of each document. The information from each web document is grouped by label, meaning that each pickle file contains a given type of information (e.g. hash, url,...) of all documents belonging to the same label. 
 
-**NB:** There is also a helper script, export_fly_for_deployment.py, which exports a minimal version of the fly containing only its KC size, WTA and projection matrix, for development purposes.
+**NB:** There is also a helper script, *export_fly_for_deployment.py*, which exports a minimal version of the fly containing only its KC size, WTA and projection matrix, for deployment purposes.
