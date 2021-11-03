@@ -137,6 +137,7 @@ def hash_dataset(dataset_mat, projection_path, percent_hash, top_words):
         part = wta_vectorized(dataset_mat[i: i+2000].toarray(), k=top_words, percent=False)
         wta_csr = vstack([wta_csr, csr_matrix(part, shape=part.shape)])
     hs = hash_input_vectorized(wta_csr[1:], percent_hash, projection_functions)
+    hs = (hs > 0).astype(np.int_)
 
     return hs
 
