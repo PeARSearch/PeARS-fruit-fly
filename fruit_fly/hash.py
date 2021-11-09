@@ -22,7 +22,7 @@ import pickle
 import numpy as np
 import time
 import pathlib
-from timer import Timer
+# from timer import Timer
 from docopt import docopt
 import sentencepiece as spm
 from scipy.sparse import coo_matrix, csr_matrix, vstack
@@ -146,7 +146,8 @@ def return_keywords(vec):
     keywords = []
     vs = np.argsort(vec)
     for i in vs[-10:]:
-        keywords.append(i)
+        if vec[i]:
+            keywords.append(i)
     return keywords
 
 
@@ -192,7 +193,7 @@ if __name__ == '__main__':
     top_tokens = int(args["--topwords"])
     percent_hash = int(args["--wta"])
 
-    t = Timer()
+    # t = Timer()
     vocab, reverse_vocab, logprobs = read_vocab()
     projection_functions, pn_to_kc = read_projections(d)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
