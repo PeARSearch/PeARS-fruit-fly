@@ -1,0 +1,3 @@
+{"pop_size": 50, "max_generation": 1, "crossover_prob": 0.5, "select_percent": 0.1, "mutate_prob_proj": 0.05, "mutate_scale_wta": 2}
+{"min_wta": 5, "max_wta": 20, "min_kc": 20, "max_kc": 60, "min_proj": 5, "max_proj": 20, "TOP_WORDS": 50, "C": 100, "NUM_ITER": 50}
+{"fitness": 0.09838111298482294, "non_zero": 0.0012211772831386197, "val_score": [0.09838111298482292, 0.0, 0.0], "kc_size": 36.24, "wta": 12.998958004105102, "kc_score": Infinity, "gen": 0, "time": 70.629465341568}

@@ -1,3 +1,18 @@
+"""Fruit Fly dataset preparation
+
+Usage:
+  prepare_datasets.py --spm=<single|per_dataset>
+  prepare_datasets.py (-h | --help)
+  prepare_datasets.py --version
+
+Options:
+  --spm=<single|per_dataset>      Choose a single sentencepiece model for all datasets, or one per dataset.
+  -h --help                       Show this screen.
+  --version                       Show version.
+
+"""
+
+
 import urllib
 import zipfile
 import requests
@@ -6,8 +21,9 @@ import tarfile
 import pathlib
 import shutil
 import os
+from os.path import join
+from docopt import docopt
 import sentencepiece as spm
-from wordpiece import output_wordpieces
 
 
 def wikipedia():
@@ -93,6 +109,38 @@ def wos():
     shutil.rmtree('./WebOfScience')
     os.remove('./WebOfScience.zip')
 
+def output_wordpieces_20news(train=True):
+    if train:
+        out_file = open("./20news-bydate/20news-bydate-train.sp", 'w')
+        base_dir = "./20news-bydate/20news-bydate-train"
+    else:
+        out_file = open("./20news-bydate/20news-bydate-test.sp", 'w')
+        base_dir = "./20news-bydate/20news-bydate-test"
+
+    # get folders in 20_newsgroup corpus
+    folders = os.listdir(base_dir)
+    print(folders)
+
+    for folder in folders:
+        d = join(base_dir,folder)
+        file_ids = os.listdir(d)
+        files = [join(d,file_id) for file_id in file_ids]
+
+        for i in range(len(files)):
+            in_file = files[i]
+            doc = ""
+            with open(in_file, encoding="utf8", errors='ignore') as f:
+                for l in f:
+                    #Ignore headers
+                    words = l.split()
+                    if len(words) > 0 and words[0][-1] != ':':
+                        doc+=l+'\n'
+            ll = sp.encode_as_pieces(doc)
+            out_file.write("<doc id="+file_ids[i]+" class="+folder+">\n")
+            out_file.write(' '.join([wp for wp in ll])+'\n')
+            out_file.write("</doc>\n")
+    out_file.close()
+
 
 def _20news():
     url = 'http://qwone.com/~jason/20Newsgroups/20news-bydate.tar.gz'
@@ -106,8 +154,8 @@ def _20news():
     urllib.request.urlcleanup()
 
     print('processing...')
-    output_wordpieces(train=True)
-    output_wordpieces(train=False)
+    output_wordpieces_20news(train=True)
+    output_wordpieces_20news(train=False)
 
     # split the original train set to form validation set
     train_text = []
@@ -141,14 +189,28 @@ def _20news():
 
 if __name__ == '__main__':
     random.seed(99)
+    args = docopt(__doc__, version='Fruit Fly Hashing, prepare_datasets 0.1')
     sp = spm.SentencePieceProcessor()
-    sp.load('../spmcc.model')
 
-    print('\nDataset: Wikipedia')
-    wikipedia()
+    if args['--spm'] == 'single':
+        sp.load('../spmwiki.model')
+    
+        print('\nDataset: Wikipedia')
+        wikipedia()
+        print('\nDataset: Web of Science')
+        wos()
+        print('\nDataset: 20newsgroups-bydate')
+        _20news()
 
-    print('\nDataset: Web of Science')
-    wos()
+    else:
+        print('\nDataset: Wikipedia')
+        sp.load("../spm/spm.wiki.model")
+        wikipedia()
 
-    print('\nDataset: 20newsgroups-bydate')
-    _20news()
+        print('\nDataset: Web of Science')
+        sp.load("../spm/spm.wos.model")
+        wos()
+
+        print('\nDataset: 20newsgroups-bydate')
+        sp.load("../spm/spm.20news.model")
+        _20news()
