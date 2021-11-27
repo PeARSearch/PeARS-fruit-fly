@@ -356,7 +356,7 @@ if __name__ == '__main__':
         vocab, reverse_vocab, logprobs = read_vocab("../spm/spm."+DATASET+".vocab")
     else:
         print("VOCAB: spmcc.vocab")
-        sp.load('..../spm/spmcc.model')
+        sp.load('../spm/spmcc.model')
         vocab, reverse_vocab, logprobs = read_vocab("../spm/spmcc.vocab")
 
     #Hyperparameters for GA
