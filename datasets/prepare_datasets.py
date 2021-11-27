@@ -72,7 +72,7 @@ def preprocess_wikipedia(train_p: float, val_p: float,
         file_ext = '.txt'
 
     # read the dataset to pandas dataframe
-    meta_files = glob.glob('./pears-fruit-fly-wikipedia-raw/wiki_dataset_raw/dataset/*/meta.csv')
+    meta_files = glob.glob('./wiki_dataset_raw/dataset/*/meta.csv')
     df_dataset = []
     for file in meta_files:
         df_dataset.append(pd.read_csv(file))
@@ -82,7 +82,7 @@ def preprocess_wikipedia(train_p: float, val_p: float,
     df_dataset.reset_index(inplace=True)
     df_dataset['doc'] = ''
 
-    data_files = glob.glob('./pears-fruit-fly-wikipedia-raw/wiki_dataset_raw/dataset/*/data.txt')
+    data_files = glob.glob('./wiki_dataset_raw/dataset/*/data.txt')
     doc = ""
     for file in data_files:
         with open(file) as f:
@@ -151,7 +151,6 @@ def prepare_wikipedia(keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
 
     print('downloading...')
     zip_path, _ = urllib.request.urlretrieve(url)
-    print('processing...')
     with zipfile.ZipFile(zip_path, 'r') as f:
         f.extractall(extract_dir)
     urllib.request.urlcleanup()
@@ -178,7 +177,7 @@ def prepare_wikipedia(keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
                          sp_model_path=sp_model_path)
 
     # remove unused files and folders
-    shutil.rmtree('./pears-fruit-fly-wikipedia-raw')
+    shutil.rmtree('./wiki_dataset_raw')
 
 
 ################################# WoS ##############################################
