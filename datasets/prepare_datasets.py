@@ -1,17 +1,19 @@
 """Fruit Fly dataset preparation
 
 Usage:
-  prepare_datasets.py --spm=<single|per_dataset>
+  prepare_datasets.py [--no_meta] [--spm=<str>]
   prepare_datasets.py (-h | --help)
   prepare_datasets.py --version
 
 Options:
-  --spm=<single|per_dataset>      Choose a single sentencepiece model for all datasets, or one per dataset.
-  -h --help                       Show this screen.
-  --version                       Show version.
+  --no_meta          Return plain text, other wise keep meta tag <id, class> in each document.
+  --spm=<str>        If the arg is not presence, do not apply sentencepeice.
+                     If you want to apply a global sentencepeice for all dataset, pass the path of the model.
+                     If you want to train a sentencepeice model for each dataset, pass "per_dataset".
+  -h --help          Show this screen.
+  --version          Show version.
 
 """
-
 
 import urllib
 import zipfile
@@ -21,13 +23,130 @@ import tarfile
 import pathlib
 import shutil
 import os
+import re
+import glob
 from os.path import join
 from docopt import docopt
 import sentencepiece as spm
+import pandas as pd
+import numpy as np
+
+RANDOM_SEED = 111
 
 
-def wikipedia():
-    url = 'http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia.zip'
+# util
+def train_sentencepiece(dataset_name, txt_path):
+    pathlib.Path(f"../spm").mkdir(parents=True, exist_ok=True)
+
+    f = open(f"../spm/{dataset_name}_train_raw.txt", 'w')
+    with open(txt_path) as txt_file:
+        for line in txt_file:
+            f.write(line.lower().replace('\n', " ") + '\n')
+    f.close()
+
+    print('training sentencepeice...')
+    spm.SentencePieceTrainer.train(f'--input=../spm/{dataset_name}_train_raw.txt \
+    --model_prefix=../spm/spm.{dataset_name} --vocab_size=10000 --minloglevel=2')
+
+    os.remove(f"../spm/{dataset_name}_train_raw.txt")
+    model_path = f'../spm/spm.{dataset_name}' + '.model'
+    print('sentencepeice model is at ', model_path)
+    return model_path
+
+
+################################ Wiki ##########################################
+def preprocess_wikipedia(train_p: float, val_p: float,
+                         keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
+    """
+    :param train_p: train percentage, from 0 to 1
+    :param val_p: validation percentage, from 0 to 1
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+    if is_sp_encode:
+        file_ext = '.sp'
+        if sp_model_path:
+            sp.load(sp_model_path)
+    else:
+        file_ext = '.txt'
+
+    # read the dataset to pandas dataframe
+    meta_files = glob.glob('./pears-fruit-fly-wikipedia-raw/wiki_dataset_raw/dataset/*/meta.csv')
+    df_dataset = []
+    for file in meta_files:
+        df_dataset.append(pd.read_csv(file))
+    df_dataset = pd.concat(df_dataset)
+    df_dataset = df_dataset.drop_duplicates(subset=['ID'])
+    df_dataset = df_dataset.set_index('ID')
+    df_dataset.reset_index(inplace=True)
+    df_dataset['doc'] = ''
+
+    data_files = glob.glob('./pears-fruit-fly-wikipedia-raw/wiki_dataset_raw/dataset/*/data.txt')
+    doc = ""
+    for file in data_files:
+        with open(file) as f:
+            for l in f:
+                l = l.rstrip('\n')
+                if l[:4] == "<doc":
+                    m = re.search(".*id=([^ ]*) ", l)
+                    ID = m.group(1)
+                    ID = int(ID.strip('"'))
+                elif l[:5] == "</doc":
+                    if is_sp_encode:
+                        ll = sp.encode_as_pieces(doc)
+                        doc = ' '.join([wp for wp in ll])
+                    mask = df_dataset['ID'] == ID
+                    pos = np.flatnonzero(mask)[0]
+                    df_dataset.at[pos, 'doc'] = doc
+                    doc = ""
+                else:
+                    doc += l + ' '
+
+    # shuffle the dataset
+    df_dataset = df_dataset.sample(frac=1, random_state=RANDOM_SEED)
+
+    # split and write to files the the splits: train, val, test
+    df_train = df_dataset.iloc[0: int(len(df_dataset)*train_p)]
+    with open(f'./wikipedia/wikipedia-train{file_ext}', 'w') as f:
+        for index, row in df_train.iterrows():
+            if keep_meta:
+                f.write("<doc id=" + str(row['ID']) + " class=" + row['label'] + ">\n")
+            f.write(row['doc'] + '\n')
+            if keep_meta:
+                f.write("</doc>\n")
+
+    df_val = df_dataset.iloc[int(len(df_dataset)*train_p): int(len(df_dataset)*(train_p+val_p))]
+    with open(f'./wikipedia/wikipedia-val{file_ext}', 'w') as f:
+        for index, row in df_val.iterrows():
+            if keep_meta:
+                f.write("<doc id=" + str(row['ID']) + " class=" + row['label'] + ">\n")
+            f.write(row['doc'] + '\n')
+            if keep_meta:
+                f.write("</doc>\n")
+
+    df_test = df_dataset.iloc[int(len(df_dataset)*(train_p+val_p)):]
+    with open(f'./wikipedia/wikipedia-test{file_ext}', 'w') as f:
+        for index, row in df_test.iterrows():
+            if keep_meta:
+                f.write("<doc id=" + str(row['ID']) + " class=" + row['label'] + ">\n")
+            f.write(row['doc'] + '\n')
+            if keep_meta:
+                f.write("</doc>\n")
+
+    # write the number of docs in each part
+    with open('./wikipedia/wikipedia_stat.txt', 'w') as f:
+        f.write(str(len(df_train)) + ' ' + str(len(df_val)) + ' ' + str(len(df_test)))
+
+
+def prepare_wikipedia(keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
+    """
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+
+    url = 'http://pearsproject.org/static/datasets/pears-fruit-fly-wikipedia-raw.zip'
     extract_dir = '.'
 
     print('downloading...')
@@ -37,59 +156,103 @@ def wikipedia():
         f.extractall(extract_dir)
     urllib.request.urlcleanup()
 
+    print('processing...')
+    if is_sp_encode:
+        if not sp_model_path:  # need to train sentencepeice
+            # create plain txt file
+            pathlib.Path('./wikipedia').mkdir(parents=True, exist_ok=True)
+            preprocess_wikipedia(train_p=0.6,
+                                 val_p=0.2,
+                                 keep_meta=False,
+                                 is_sp_encode=False,
+                                 sp_model_path=None)
+            sp_model_path = train_sentencepiece(dataset_name='wikipedia',
+                                                txt_path='./wikipedia/wikipedia-train.txt')
+            shutil.rmtree('./wikipedia')
 
-def output_wordpieces_wos(text_file, label_file, train_p, val_p):
+    pathlib.Path('./wikipedia').mkdir(parents=True, exist_ok=True)
+    preprocess_wikipedia(train_p=0.6,
+                         val_p=0.2,
+                         keep_meta=keep_meta,
+                         is_sp_encode=is_sp_encode,
+                         sp_model_path=sp_model_path)
+
+    # remove unused files and folders
+    shutil.rmtree('./pears-fruit-fly-wikipedia-raw')
+
+
+################################# WoS ##############################################
+def preprocess_wos(text_file: str, label_file: str, train_p: float, val_p: float,
+                   keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
     """
-    train_p, val_p: the proportion of traning part and validation part
-    They should be > 0 and < 1, e.g. 0.6 and 0.2 (the testing part remains 0.2)
+    :param text_file: path
+    :param label_file: path
+    :param train_p: train percentage, from 0 to 1
+    :param val_p: validation percentage, from 0 to 1
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
     """
 
-    outfile_train = open("./wos/wos11967-train.sp", 'w')
-    outfile_val = open("./wos/wos11967-val.sp", 'w')
-    outfile_test = open("./wos/wos11967-test.sp", 'w')
-    n_train, n_val, n_test = 0, 0, 0 # count the number of docs for each part
+    if is_sp_encode:
+        file_ext = '.sp'
+        if sp_model_path:
+            sp.load(sp_model_path)
+    else:
+        file_ext = '.txt'
 
+    # read label file
     with open(label_file) as f:
         labels = f.readlines()
     label_idx = 0
 
+    # read text file
+    doc_list = []
     with open(text_file, encoding="utf8", errors='ignore') as f:
         for l in f:
             l = l.rstrip('\n')
-            ll = sp.encode_as_pieces(l)
             label = labels[label_idx].rstrip('\n')
-
-            # use random to decide the current doc belongs to train, val, or test
-            is_train = random.choices([0, 1], weights=[1-train_p, train_p])[0]
-            if is_train:
-                outfile_train.write("<doc id="+str(label_idx)+" class="+label+">\n")
-                outfile_train.write(' '.join([wp for wp in ll])+'\n')
-                outfile_train.write("</doc>\n")
-                n_train += 1
+            doc = ''
+            if keep_meta:
+                doc += "<doc id="+str(label_idx)+" class="+label+">\n"
+            if is_sp_encode:
+                doc += ' '.join([wp for wp in sp.encode_as_pieces(l)])+'\n'
             else:
-                is_val = random.choices([0, 1], weights=[1-val_p/(1-train_p), val_p/(1-train_p)])[0]
-                if is_val:
-                    outfile_val.write("<doc id="+str(label_idx)+" class="+label+">\n")
-                    outfile_val.write(' '.join([wp for wp in ll])+'\n')
-                    outfile_val.write("</doc>\n")
-                    n_val += 1
-                else:
-                    outfile_test.write("<doc id="+str(label_idx)+" class="+label+">\n")
-                    outfile_test.write(' '.join([wp for wp in ll])+'\n')
-                    outfile_test.write("</doc>\n")
-                    n_test += 1
+                doc += l+'\n'
+            if keep_meta:
+                doc += "</doc>\n"
+            doc_list.append(doc)
             label_idx += 1
 
-    outfile_train.close()
-    outfile_val.close()
-    outfile_test.close()
+    # shuffle and split
+    random.seed(RANDOM_SEED)
+    random.shuffle(doc_list)
+    doc_train = doc_list[0: int(len(doc_list)*train_p)]
+    doc_val = doc_list[int(len(doc_list)*train_p): int(len(doc_list)*(train_p+val_p))]
+    doc_test = doc_list[int(len(doc_list)*(train_p+val_p)):]
+
+    with open(f"./wos/wos11967-train{file_ext}", 'w') as f:
+        for doc in doc_train:
+            f.write(doc)
+    with open(f"./wos/wos11967-val{file_ext}", 'w') as f:
+        for doc in doc_val:
+            f.write(doc)
+    with open(f"./wos/wos11967-test{file_ext}", 'w') as f:
+        for doc in doc_test:
+            f.write(doc)
 
     # write the number of docs in each part
     with open('./wos/wos11967_stat.txt', 'w') as f:
-        f.write(str(n_train) + ' ' + str(n_val) + ' ' + str(n_test))
+        f.write(str(len(doc_train)) + ' ' + str(len(doc_val)) + ' ' + str(len(doc_test)))
 
 
-def wos():
+def prepare_wos(keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
+    """
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+
     url = 'https://data.mendeley.com/public-files/datasets/9rw3vkcfy4/files/c9ea673d-5542-44c0-ab7b-f1311f7d61df/file_downloaded'
 
     print('downloading...')
@@ -100,27 +263,61 @@ def wos():
         f.extractall('./WebOfScience')
 
     print('processing...')
+    if is_sp_encode:
+        if not sp_model_path:  # need to train sentencepeice
+            # create plain txt file
+            pathlib.Path('./wos').mkdir(parents=True, exist_ok=True)
+            preprocess_wos(text_file='./WebOfScience/WOS11967/X.txt',
+                           label_file='./WebOfScience/WOS11967/Y.txt',
+                           train_p=0.6,
+                           val_p=0.2,
+                           keep_meta=False,
+                           is_sp_encode=False,
+                           sp_model_path=None)
+            sp_model_path = train_sentencepiece(dataset_name='wos',
+                                                txt_path='./wos/wos11967-train.txt')
+            shutil.rmtree('./wos')
+
     pathlib.Path('./wos').mkdir(parents=True, exist_ok=True)
-    output_wordpieces_wos(text_file='./WebOfScience/WOS11967/X.txt',
-                          label_file='./WebOfScience/WOS11967/Y.txt',
-                          train_p=0.6, val_p=0.2)
+    preprocess_wos(text_file='./WebOfScience/WOS11967/X.txt',
+                   label_file='./WebOfScience/WOS11967/Y.txt',
+                   train_p=0.6,
+                   val_p=0.2,
+                   keep_meta=keep_meta,
+                   is_sp_encode=is_sp_encode,
+                   sp_model_path=sp_model_path)
 
     # remove unused files and folders
     shutil.rmtree('./WebOfScience')
     os.remove('./WebOfScience.zip')
 
-def output_wordpieces_20news(train=True):
-    if train:
-        out_file = open("./20news-bydate/20news-bydate-train.sp", 'w')
+
+############################# 20news #########################
+def preprocess_20news(is_train: bool, keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
+    """
+    :param is_train: True if using train part, False if using test part
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+
+    if is_sp_encode:
+        file_ext = '.sp'
+        if sp_model_path:
+            sp.load(sp_model_path)
+    else:
+        file_ext = '.txt'
+
+    if is_train:
         base_dir = "./20news-bydate/20news-bydate-train"
     else:
-        out_file = open("./20news-bydate/20news-bydate-test.sp", 'w')
         base_dir = "./20news-bydate/20news-bydate-test"
 
     # get folders in 20_newsgroup corpus
     folders = os.listdir(base_dir)
-    print(folders)
+    # print(folders)
 
+    doc_list = []
     for folder in folders:
         d = join(base_dir,folder)
         file_ids = os.listdir(d)
@@ -134,15 +331,45 @@ def output_wordpieces_20news(train=True):
                     #Ignore headers
                     words = l.split()
                     if len(words) > 0 and words[0][-1] != ':':
-                        doc+=l+'\n'
-            ll = sp.encode_as_pieces(doc)
-            out_file.write("<doc id="+file_ids[i]+" class="+folder+">\n")
-            out_file.write(' '.join([wp for wp in ll])+'\n')
-            out_file.write("</doc>\n")
-    out_file.close()
+                        doc += l
+            doc_n_meta = ''
+            if keep_meta:
+                doc_n_meta += "<doc id="+file_ids[i]+" class="+folder+">\n"
+            if is_sp_encode:
+                doc_n_meta += ' '.join([wp for wp in sp.encode_as_pieces(doc)])+'\n'
+            else:
+                doc_n_meta += doc
+            if keep_meta:
+                doc_n_meta += "</doc>\n"
+            doc_list.append(doc_n_meta)
+
+    if is_train:  # split the original train set to form validation set
+        random.seed(RANDOM_SEED)
+        random.shuffle(doc_list)
+
+        # validation set
+        with open(f'./20news-bydate/20news-bydate-val{file_ext}', 'w') as f:
+            for doc in doc_list[8000:]:
+                f.writelines(doc)
+
+        # new training set
+        with open(f'./20news-bydate/20news-bydate-train{file_ext}', 'w') as f:
+            for doc in doc_list[:8000]:
+                f.writelines(doc)
+
+    else:
+        with open(f'./20news-bydate/20news-bydate-test{file_ext}', 'w') as f:
+            for doc in doc_list:
+                f.writelines(doc)
 
 
-def _20news():
+def prepare_20news(keep_meta, is_sp_encode, sp_model_path):
+    """
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+
     url = 'http://qwone.com/~jason/20Newsgroups/20news-bydate.tar.gz'
     extract_dir = './20news-bydate'
 
@@ -154,33 +381,22 @@ def _20news():
     urllib.request.urlcleanup()
 
     print('processing...')
-    output_wordpieces_20news(train=True)
-    output_wordpieces_20news(train=False)
+    if is_sp_encode:
+        if not sp_model_path:  # need to train sentencepeice
+            # create plain txt file
+            preprocess_20news(is_train=True,
+                              keep_meta=False,
+                              is_sp_encode=False,
+                              sp_model_path=None)
+            sp_model_path = train_sentencepiece(dataset_name='20news',
+                                                txt_path='./20news-bydate/20news-bydate-train.txt')
+            os.remove('./20news-bydate/20news-bydate-train.txt')
+            os.remove('./20news-bydate/20news-bydate-val.txt')
 
-    # split the original train set to form validation set
-    train_text = []
-    chunk = ''
-    with open('./20news-bydate/20news-bydate-train.sp') as f:
-        for line in f:
-            if line[:4] == "<doc":
-                chunk += line
-            elif line[:5] == "</doc":
-                chunk += line
-                train_text.append(chunk)
-                chunk = ''
-            else:
-                chunk += line
-    random.shuffle(train_text)
-
-    # validation set
-    with open('./20news-bydate/20news-bydate-val.sp', 'w') as f:
-        for doc in train_text[8000:]:
-            f.writelines(doc)
-
-    # new training set
-    with open('./20news-bydate/20news-bydate-train.sp', 'w') as f:
-        for doc in train_text[:8000]:
-            f.writelines(doc)
+    preprocess_20news(is_train=True, keep_meta=keep_meta,
+                      is_sp_encode=is_sp_encode, sp_model_path=sp_model_path)
+    preprocess_20news(is_train=False, keep_meta=keep_meta,
+                      is_sp_encode=is_sp_encode, sp_model_path=sp_model_path)
 
     # remove unused files and folders
     shutil.rmtree('./20news-bydate/20news-bydate-train')
@@ -188,29 +404,42 @@ def _20news():
 
 
 if __name__ == '__main__':
-    random.seed(99)
     args = docopt(__doc__, version='Fruit Fly Hashing, prepare_datasets 0.1')
+    random.seed(RANDOM_SEED)
     sp = spm.SentencePieceProcessor()
 
-    if args['--spm'] == 'single':
-        sp.load('../spmwiki.model')
-    
-        print('\nDataset: Wikipedia')
-        wikipedia()
-        print('\nDataset: Web of Science')
-        wos()
-        print('\nDataset: 20newsgroups-bydate')
-        _20news()
-
+    if args['--no_meta']:
+        keep_meta = False
+        print('Do not keep meta data')
     else:
-        print('\nDataset: Wikipedia')
-        sp.load("../spm/spm.wiki.model")
-        wikipedia()
+        keep_meta = True
+        print('Keep meta data <id, class>')
 
-        print('\nDataset: Web of Science')
-        sp.load("../spm/spm.wos.model")
-        wos()
+    if args['--spm']:
+        is_sp_encode = True
+        if args['--spm'] == 'per_dataset':
+            sp_model_path = None
+            print('Train sentencepeice model from scratch')
+        else:
+            sp_model_path = args['--spm']
+            print('Use available sentencepeice model from ', sp_model_path)
+    else:
+        is_sp_encode = False
+        sp_model_path = None
+        print('Do not apply sentencepeice model')
 
-        print('\nDataset: 20newsgroups-bydate')
-        sp.load("../spm/spm.20news.model")
-        _20news()
+    print('\nDataset: Wikipedia')
+    prepare_wikipedia(keep_meta=keep_meta,
+                      is_sp_encode=is_sp_encode,
+                      sp_model_path=sp_model_path)
+
+    print('\nDataset: Web of Science')
+    prepare_wos(keep_meta=keep_meta,
+                is_sp_encode=is_sp_encode,
+                sp_model_path=sp_model_path)
+
+    print('\nDataset: 20newsgroups-bydate')
+    prepare_20news(keep_meta=keep_meta,
+                   is_sp_encode=is_sp_encode,
+                   sp_model_path=sp_model_path)
+
