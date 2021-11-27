@@ -3,14 +3,28 @@
 This directory contains the datasets to be processed by the fruit fly. There are three datasets: Wikipedia, [Web
 of Science](https://data.mendeley.com/datasets/9rw3vkcfy4/6) (medium-size version), and [20newsgroups](http://qwone.com/~jason/20Newsgroups/).
 
-Simply run one of the following commands to download the three datasets, and pre-process them for training:
+The script `prepare_datasets.py` download the datasets and split them to train, validation, and test parts.
 
-    python prepare_datasets.py --spm=single
+In the default setting, the datasets contains meta tag `<id, class>` attached to each original document:
+
+    python prepare_datasets.py
+
+To get plain text (without meta tag), run:
+
+    python prepare_datasets.py --no_meta
+
+To get the datasets pre-processed by sentencepeice models, run one of the two commands:
+
+    python prepare_datasets.py --spm=../spm/spmcc.model
     python prepare_datasets.py --spm=per_dataset
 
-The first command will process all datasets with a single sentencepiece model, trained on Common Crawl data. The second command processes each dataset individually, with a sentencepiece model issued from that dataset's training set. You should use the second command when training fruit flies from the **budgeting** directory, and the first command otherwise.
+The first command will process all datasets with a single sentencepiece model, trained on Common Crawl data.
+The second command processes each dataset individually, with a sentencepiece model issued from that dataset's training set.
 
-The process may take a few minutes. After finishing, there will be three new folders created in the **datasets** directory, containing the necessary data.
+You should use the second command when training fruit flies from the **budgeting** directory, and the first command otherwise.
+
+The process may take a few minutes. After finishing, there will be three new folders created in the **datasets** directory,
+containing the necessary data.
 
 ## How to re-create the Wikipedia dataset
 

@@ -351,13 +351,13 @@ if __name__ == '__main__':
     
     if args['--dataset']:
         DATASET = args['--dataset']
-        print("VOCAB: "+DATASET+".spmcc.vocab")
+        print("VOCAB: "+DATASET+".spm.vocab")
         sp.load("../spm/spm."+DATASET+".model")
         vocab, reverse_vocab, logprobs = read_vocab("../spm/spm."+DATASET+".vocab")
     else:
         print("VOCAB: spmcc.vocab")
-        sp.load('../spmcc.model')
-        vocab, reverse_vocab, logprobs = read_vocab("../spmcc.vocab")
+        sp.load('..../spm/spmcc.model')
+        vocab, reverse_vocab, logprobs = read_vocab("../spm/spmcc.vocab")
 
     #Hyperparameters for GA
     POP_SIZE = 50
