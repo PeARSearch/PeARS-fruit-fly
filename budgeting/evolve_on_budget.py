@@ -23,10 +23,8 @@ import time
 from datetime import datetime
 from copy import deepcopy
 
-from hyperparam_search import read_n_encode_dataset
 from classify import train_model
-from hash import read_vocab
-from utils import hash_dataset_, append_as_json, get_stats
+from utils import read_vocab, read_n_encode_dataset, hash_dataset_, append_as_json, get_stats
 import itertools
 
 class Fly:
