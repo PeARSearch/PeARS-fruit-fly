@@ -24,9 +24,9 @@ from docopt import docopt
 from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import csr_matrix
 
-from mkprojections import create_projections
-from hash import read_vocab, hash_dataset
 from classify import train_model
+from utils import read_vocab, read_n_encode_dataset, hash_dataset_
+from evolve_on_budget import Fly
 
 from bayes_opt import BayesianOptimization
 from bayes_opt.logger import JSONLogger
@@ -34,68 +34,34 @@ from bayes_opt.event import Events
 from bayes_opt.util import load_logs
 
 
-def generate_projs(PN_size, KC_size, proj_size, dataset_name):
-    d = "models/projection/"+dataset_name+"/kc"+str(KC_size)+"-p"+str(proj_size)
-    if not os.path.isdir(d):
-        os.mkdir(d)
-    trial = len(os.listdir(d))
-    model_file = create_projections(PN_size, KC_size, proj_size, d, trial)
-    return model_file
-
-
-def read_n_encode_dataset(path, vectorizer, logprobs):
-    # read
-    doc_list, label_list = [], []
-    doc = ""
-    with open(path) as f:
-        for l in f:
-            l = l.rstrip('\n')
-            if l[:4] == "<doc":
-                m = re.search(".*class=([^ ]*)>", l)
-                label = m.group(1)
-                label_list.append(label)
-            elif l[:5] == "</doc":
-                doc_list.append(doc)
-                doc = ""
-            else:
-                doc += l + ' '
-
-    # encode
-    X = vectorizer.fit_transform(doc_list)
-    X = csr_matrix(X)
-    X = X.multiply(logprobs)
-
-    return X, label_list
-
-
 def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
                       C, num_iter, num_trial):
-    def _hash_n_train(model_file):
-        # print('hashing dataset')
-        hash_train = hash_dataset(dataset_mat=train_set, projection_path=model_file,
-                                  percent_hash=percent_hash, top_words=top_word)
-        hash_val = hash_dataset(dataset_mat=val_set, projection_path=model_file,
-                                percent_hash=percent_hash, top_words=top_word)
-        # print('training and evaluating')
+    def _hash_n_train(fly):
+        hash_train = hash_dataset_(dataset_mat=train_set, weight_mat=fly.projections,
+                                   percent_hash=fly.wta, top_words=top_word)
+        hash_val = hash_dataset_(dataset_mat=val_set, weight_mat=fly.projections,
+                                 percent_hash=fly.wta, top_words=top_word)
         val_score, model = train_model(m_train=hash_train, classes_train=train_label,
                                        m_val=hash_val, classes_val=val_label,
                                        C=C, num_iter=num_iter)
         return val_score, model
 
     print('creating projections')
-    model_files = [generate_projs(PN_size, KC_size, proj_size, dataset_name) for _ in range(num_trial)]
+    MIN_KC, MAX_KC = KC_size, KC_size + 1
+    MIN_WTA, MAX_WTA = percent_hash, percent_hash + 1
+    MIN_PROJ, MAX_PROJ = proj_size, proj_size + 1
+    fly_list = [Fly() for _ in range(num_trial)]
 
     print('training')
     score_list, model_list = [], []
     score_model_list = joblib.Parallel(n_jobs=max_thread, prefer="threads")(
-        joblib.delayed(_hash_n_train)(model_file) for model_file in model_files)
+        joblib.delayed(_hash_n_train)(fly) for fly in fly_list)
     score_list += [i[0] for i in score_model_list]
     model_list += [i[1] for i in score_model_list]
 
     # select the max performance
     max_idx = np.argmax(score_list)
-    trial = model_files[max_idx].split('.')[0].split('_')[1]
-    save_name = 'kc' + str(KC_size) + '_proj' + str(proj_size) + '_trial' + str(trial) +\
+    save_name = 'kc' + str(KC_size) + '_proj' + str(proj_size) +\
                 '_top' + str(top_word) + '_wta' + str(percent_hash) + '_C' + str(C) + \
                 '_iter' + str(num_iter) + '_score' + str(score_list[max_idx])[2:]  # remove 0.
     global max_val_score
@@ -120,25 +86,27 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
 
 
 def optimize_fruitfly(continue_log):
-    def _classify(topword, KC_size, proj_size, percent_hash, C):
+    def _classify(topword, KC_size, proj_size, percent_hash):
         topword = round(topword)
         KC_size = round(KC_size)
         proj_size = round(proj_size)
         percent_hash = round(percent_hash)
-        C = round(C)
+        C = 100
+        num_iter=2000
         num_trial = 3
-        num_iter = 50
-        if dataset_name == '20news':
-            num_iter = 2000  # 50 wos wiki, 2000 20news
+        # if dataset_name == '20news':
+        #     num_iter = 2000  # 50 wos wiki, 2000 20news
         print(f'--- KC_size {KC_size}, proj_size {proj_size}, '
-              f'top_word {topword}, wta {percent_hash}, C {C} ---')
+              f'top_word {topword}, wta {percent_hash}, C {C}, num_iter {num_iter} ---')
         return fruitfly_pipeline(topword, KC_size, proj_size, percent_hash,
                                  C, num_iter, num_trial)
 
     optimizer = BayesianOptimization(
         f=_classify,
-        pbounds={"topword": (10, 250), "KC_size": (3000, 9000),
-                 "proj_size": (2, 10), "percent_hash": (2, 20), "C": (1, 100)},
+        pbounds={"topword": (100, 500), "KC_size": (20, 1500),
+                 "proj_size": (2, 10), "percent_hash": (5, 20),
+                 # 'C':(C), 'num_iter':(num_iter)
+                 },
         #random_state=1234,
         verbose=2
     )
@@ -150,7 +118,7 @@ def optimize_fruitfly(continue_log):
     logger = JSONLogger(path=tmp_log_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-    optimizer.maximize(n_iter=200)
+    optimizer.maximize(n_iter=500)
     print("Final result:", optimizer.max)
     with open(main_log_path, 'a') as f_main:
         with open(tmp_log_path) as f_tmp:
@@ -160,8 +128,24 @@ def optimize_fruitfly(continue_log):
 
 if __name__ == '__main__':
     args = docopt(__doc__, version='Hyper-parameter search by Bayesian optimization, ver 0.1')
-    train_path = args["--train_path"]
+    dataset = args["--dataset"]
     continue_log = args["--continue_log"]
+    # num_iter = args["--num_iter"]
+    # C = args["--C"]
+
+    if dataset == "wiki":
+        train_path="../datasets/wikipedia/wikipedia-train.sp"
+        spm_model = "../spm/spm.wikipedia.model"
+        spm_vocab = "../spm/spm.wikipedia.vocab"
+    if dataset == "20news":
+        train_path="../datasets/20news-bydate/20news-bydate-train.sp"
+        spm_model = "../spm/spm.20news.model"
+        spm_vocab = "../spm/spm.20news.vocab"
+    if dataset == "wos":
+        train_path="../datasets/wos/wos11967-train.sp"
+        spm_model = "../spm/spm.wos.model"
+        spm_vocab = "../spm/spm.wos.vocab"
+
     dataset_name = train_path.split('/')[2].split('-')[0]
     print('Dataset name:', dataset_name)
 
@@ -174,10 +158,10 @@ if __name__ == '__main__':
 
     # global variables
     sp = spm.SentencePieceProcessor()
-    sp.load('../spmwiki.model')
-    vocab, reverse_vocab, logprobs = read_vocab()
-    PN_size = len(vocab)
-    vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
+    sp.load(spm_model)
+    vocab, reverse_vocab, logprobs = read_vocab(spm_vocab)
+    PN_SIZE = len(vocab)
+    vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
     print('reading dataset')
     train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs)
     val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs)
