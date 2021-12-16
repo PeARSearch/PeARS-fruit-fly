@@ -1,3 +1,4 @@
+import re
 import json
 import pickle
 import numpy as np
@@ -9,6 +10,51 @@ from hash import wta_vectorized
 from bayes_opt import BayesianOptimization
 from bayes_opt.logger import JSONLogger
 from bayes_opt.event import Events
+
+
+def read_vocab(vocab_file):
+    c = 0
+    vocab = {}
+    reverse_vocab = {}
+    logprobs = []
+    with open(vocab_file) as f:
+        for l in f:
+            l = l.rstrip('\n')
+            wp = l.split('\t')[0]
+            logprob = -(float(l.split('\t')[1]))
+            #logprob = log(lp + 1.1)
+            if wp in vocab or wp == '':
+                continue
+            vocab[wp] = c
+            reverse_vocab[c] = wp
+            logprobs.append(logprob**3)
+            c+=1
+    return vocab, reverse_vocab, logprobs
+
+
+def read_n_encode_dataset(path, vectorizer, logprobs):
+    # read
+    doc_list, label_list = [], []
+    doc = ""
+    with open(path) as f:
+        for l in f:
+            l = l.rstrip('\n')
+            if l[:4] == "<doc":
+                m = re.search(".*class=([^ ]*)>", l)
+                label = m.group(1)
+                label_list.append(label)
+            elif l[:5] == "</doc":
+                doc_list.append(doc)
+                doc = ""
+            else:
+                doc += l + ' '
+
+    # encode
+    X = vectorizer.fit_transform(doc_list)
+    X = csr_matrix(X)
+    X = X.multiply(logprobs)
+
+    return X, label_list
 
 
 def write_as_json(dic, f):
