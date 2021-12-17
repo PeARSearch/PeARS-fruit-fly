@@ -116,7 +116,7 @@ def optimize_fruitfly(continue_log):
     logger = JSONLogger(path=tmp_log_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-    optimizer.maximize(n_iter=5)
+    optimizer.maximize(n_iter=500)
     print("Final result:", optimizer.max)
     with open(main_log_path, 'a') as f_main:
         with open(tmp_log_path) as f_tmp:
