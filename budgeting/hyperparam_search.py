@@ -1,12 +1,12 @@
 """Hyper-parameter search by Bayesian optimization
 Usage:
-  hyperparam_search.py --train_path=<filename> [--continue_log=<filename>]
+  hyperparam_search.py --dataset=<str> [--continue_log=<filename>]
   hyperparam_search.py (-h | --help)
   hyperparam_search.py --version
 Options:
   -h --help                       Show this screen.
   --version                       Show version.
-  --train_path=<filename>         Name of file to train (processed by sentencepeice)
+  --train_path=<str>              Name of file the dataset, either wiki, 20news, or wos  (processed by sentencepeice)
   [--continue_log=<filename>]     Name of the json log file that we want the Bayesian optimization continues
 """
 
@@ -47,10 +47,8 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
         return val_score, model
 
     print('creating projections')
-    MIN_KC, MAX_KC = KC_size, KC_size + 1
-    MIN_WTA, MAX_WTA = percent_hash, percent_hash + 1
-    MIN_PROJ, MAX_PROJ = proj_size, proj_size + 1
-    fly_list = [Fly() for _ in range(num_trial)]
+    fly_list = [Fly(pn_size=PN_SIZE, kc_size=KC_size,
+                    wta=percent_hash, num_proj=proj_size) for _ in range(num_trial)]
 
     print('training')
     score_list, model_list = [], []
@@ -118,7 +116,7 @@ def optimize_fruitfly(continue_log):
     logger = JSONLogger(path=tmp_log_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-    optimizer.maximize(n_iter=500)
+    optimizer.maximize(n_iter=5)
     print("Final result:", optimizer.max)
     with open(main_log_path, 'a') as f_main:
         with open(tmp_log_path) as f_tmp:

@@ -116,3 +116,7 @@ web_map/pod_starter/hashes/
 
 # models
 models/kc*
+
+# budgeting
+budgeting/log
+budgeting/models

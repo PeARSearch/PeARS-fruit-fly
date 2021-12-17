@@ -28,13 +28,20 @@ from utils import read_vocab, read_n_encode_dataset, hash_dataset_, append_as_js
 import itertools
 
 class Fly:
-    def __init__(self):
-        self.kc_size = np.random.randint(low=MIN_KC, high=MAX_KC)
-        self.wta = np.random.uniform(low=MIN_WTA, high=MAX_WTA)
-        weight_mat = np.zeros((self.kc_size, PN_SIZE))
+    def __init__(self, pn_size, kc_size=None, wta=None, num_proj=None):
+        if kc_size:
+            self.kc_size = kc_size
+        else:
+            self.kc_size = np.random.randint(low=MIN_KC, high=MAX_KC)
+        if wta:
+            self.wta = wta
+        else:
+            self.wta = np.random.uniform(low=MIN_WTA, high=MAX_WTA)
+        weight_mat = np.zeros((self.kc_size, pn_size))
         for i in range(self.kc_size):
-            num_proj = np.random.randint(low=MIN_PROJ, high=MAX_PROJ)
-            for j in np.random.randint(PN_SIZE, size=num_proj):
+            if not num_proj:
+                num_proj = np.random.randint(low=MIN_PROJ, high=MAX_PROJ)
+            for j in np.random.randint(pn_size, size=num_proj):
                 weight_mat[i, j] = 1
         self.projections = lil_matrix(weight_mat)
         self.val_scores = [0, 0, 0]
@@ -75,7 +82,7 @@ def init_pop(pop_size: int):
     Generate a random population
     """
     population = joblib.Parallel(n_jobs=max_thread, prefer="threads")(
-        joblib.delayed(Fly)() for _ in range(pop_size))
+        joblib.delayed(Fly)(pn_size=PN_SIZE) for _ in range(pop_size))
     return population
 
 
