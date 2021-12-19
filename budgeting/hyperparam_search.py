@@ -34,7 +34,7 @@ from bayes_opt.event import Events
 from bayes_opt.util import load_logs
 
 
-def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
+def fruitfly_pipeline(top_word, KC_size, proj_size, num_nonzero,
                       C, num_iter, num_trial):
     def _hash_n_train(fly):
         hash_train = hash_dataset_(dataset_mat=train_set, weight_mat=fly.projections,
@@ -48,7 +48,7 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
 
     print('creating projections')
     fly_list = [Fly(pn_size=PN_SIZE, kc_size=KC_size,
-                    wta=percent_hash, num_proj=proj_size) for _ in range(num_trial)]
+                    wta=None, num_proj=proj_size, num_nonzero=num_nonzero) for _ in range(num_trial)]
 
     print('training')
     score_list, model_list = [], []
@@ -60,7 +60,7 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
     # select the max performance
     max_idx = np.argmax(score_list)
     save_name = 'kc' + str(KC_size) + '_proj' + str(proj_size) +\
-                '_top' + str(top_word) + '_wta' + str(percent_hash) + '_C' + str(C) + \
+                '_top' + str(top_word) + '_nonzero' + str(num_nonzero) + '_C' + str(C) + \
                 '_iter' + str(num_iter) + '_score' + str(score_list[max_idx])[2:]  # remove 0.
     global max_val_score
     if score_list[max_idx] > max_val_score:
@@ -77,35 +77,36 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, percent_hash,
     # write the std
     with open(f'./log/logs_{dataset_name}.tsv', 'a') as f:
         f.writelines('\t'.join(str(i) for i in [KC_size, proj_size, top_word,
-                                                percent_hash, C, num_iter, avg_score, std_score]))
+                                                num_nonzero, C, num_iter, avg_score, std_score]))
         f.writelines('\n')
 
     return avg_score
 
 
 def optimize_fruitfly(continue_log):
-    def _classify(topword, KC_size, proj_size, percent_hash):
+    def _classify(topword, KC_size, proj_size, C):
         topword = round(topword)
         KC_size = round(KC_size)
         proj_size = round(proj_size)
-        percent_hash = round(percent_hash)
-        C = 100
         num_iter=2000
         num_trial = 3
+        num_nonzero = 300
+        percent_hash = num_nonzero / KC_size * 100
         # if dataset_name == '20news':
         #     num_iter = 2000  # 50 wos wiki, 2000 20news
         print(f'--- KC_size {KC_size}, proj_size {proj_size}, '
               f'top_word {topword}, wta {percent_hash}, C {C}, num_iter {num_iter} ---')
-        return fruitfly_pipeline(topword, KC_size, proj_size, percent_hash,
+        return fruitfly_pipeline(topword, KC_size, proj_size, num_nonzero,
                                  C, num_iter, num_trial)
 
     optimizer = BayesianOptimization(
         f=_classify,
         pbounds={"topword": (100, 500), "KC_size": (20, 1500),
-                 "proj_size": (2, 10), "percent_hash": (5, 20),
+                 "proj_size": (2, 20), "C": (0, 100)
+                 # "percent_hash": (5, 20),
                  # 'C':(C), 'num_iter':(num_iter)
                  },
-        #random_state=1234,
+        # random_state=1234,
         verbose=2
     )
 

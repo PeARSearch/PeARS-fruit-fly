@@ -28,21 +28,37 @@ from utils import read_vocab, read_n_encode_dataset, hash_dataset_, append_as_js
 import itertools
 
 class Fly:
-    def __init__(self, pn_size, kc_size=None, wta=None, num_proj=None):
-        if kc_size:
-            self.kc_size = kc_size
+    def __init__(self, pn_size, kc_size=None, wta=None, num_proj=None, num_nonzero=None):
+        if not num_nonzero:
+            if kc_size:
+                self.kc_size = kc_size
+            else:
+                self.kc_size = np.random.randint(low=MIN_KC, high=MAX_KC)
+            if wta:
+                self.wta = wta
+            else:
+                self.wta = np.random.uniform(low=MIN_WTA, high=MAX_WTA)
         else:
-            self.kc_size = np.random.randint(low=MIN_KC, high=MAX_KC)
-        if wta:
-            self.wta = wta
-        else:
-            self.wta = np.random.uniform(low=MIN_WTA, high=MAX_WTA)
+            if kc_size:
+                self.kc_size = kc_size
+                self.wta = num_nonzero / kc_size * 100
+            else:
+                self.kc_size = int(num_nonzero / (wta / 100))
+                self.wta = wta
+
         weight_mat = np.zeros((self.kc_size, pn_size))
-        for i in range(self.kc_size):
-            if not num_proj:
-                num_proj = np.random.randint(low=MIN_PROJ, high=MAX_PROJ)
-            for j in np.random.randint(pn_size, size=num_proj):
-                weight_mat[i, j] = 1
+        # for i in range(self.kc_size):
+        #     if not num_proj:
+        #         num_proj = np.random.randint(low=MIN_PROJ, high=MAX_PROJ)
+        #     for j in np.random.randint(pn_size, size=num_proj):
+        #         weight_mat[i, j] = 1
+        idx_list = np.array(list(range(pn_size)) * (1 + kc_size*num_proj//pn_size))
+        np.random.shuffle(idx_list)
+        idx_list = idx_list[: kc_size*num_proj].reshape(kc_size, num_proj)
+        idx = [(i, j) for i in range(kc_size) for j in idx_list[i]]
+        rows, cols = zip(*idx)
+        weight_mat[rows, cols] = 1
+
         self.projections = lil_matrix(weight_mat)
         self.val_scores = [0, 0, 0]
         self.kc_score = 1 / np.log10(int(self.kc_size * self.wta / 100))
