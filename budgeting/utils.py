@@ -5,6 +5,8 @@ import numpy as np
 from scipy.sparse import csr_matrix, vstack
 from os.path import exists
 from hash import wta_vectorized
+import pandas as pd
+import seaborn as sns
 # from evolve_flies import genetic_alg
 
 from bayes_opt import BayesianOptimization
@@ -188,3 +190,34 @@ def bayesian_optimization():
            'mutate_scale_wta': optimizer.max['params']['mutate_scale_wta']}
     print("Final result:", optimizer.max)
     append_as_json(dic, "./models/evolution/bayes_results.json")
+
+
+def read_result_json(log_file_list):
+    with open('./log/logs_wos.json') as f:
+        res_wos = f.read()
+    with open('./log/logs_wikipedia.json') as f:
+        res_wiki = f.read()
+    with open('./log/logs_20news.json') as f:
+        res_20news = f.read()
+
+    res_wos = pd.read_json(res_wos, lines=True)
+    res_wiki = pd.read_json(res_wiki, lines=True)
+    res_20news = pd.read_json(res_20news, lines=True)
+
+    res_wos = pd.concat([res_wos['target'], pd.json_normalize(res_wos['params']),
+                         pd.json_normalize(res_wos['datetime'])], axis=1)
+    res_wiki = pd.concat([res_wiki['target'], pd.json_normalize(res_wiki['params']),
+                         pd.json_normalize(res_wiki['datetime'])], axis=1)
+    res_20news = pd.concat([res_20news['target'], pd.json_normalize(res_20news['params']),
+                         pd.json_normalize(res_20news['datetime'])], axis=1)
+
+    res_wos['dataset'] = 'wos'
+    res_wiki['dataset'] = 'wiki'
+    res_20news['dataset'] = '20news'
+
+    res_wos.sort_values(by=['KC_size'], inplace=True)
+    res_wiki.sort_values(by=['KC_size'], inplace=True)
+    res_20news.sort_values(by=['KC_size'], inplace=True)
+
+    res_multi = pd.concat([res_wos, res_wiki, res_20news])
+    sns.lineplot(data=res_multi, x="KC_size", y="target", hue="dataset")

@@ -35,100 +35,31 @@ from bayes_opt.logger import JSONLogger
 from bayes_opt.event import Events
 from bayes_opt.util import load_logs
 
-
-# # util
-# def near_shuffle(pn_size):
-#     def _truncated_normal(mean, sd, low, high):
-#         return truncnorm((low - mean) / sd, (high - mean) / sd, loc=mean, scale=sd)
-#
-#     ignore_idx = 50
-#     idx_list = list(range(ignore_idx, pn_size))
-#     new_idx_list = [int(_truncated_normal(mean=i, sd=10, low=ignore_idx, high=pn_size).rvs(size=1))
-#                     for i in range(ignore_idx, pn_size)]
+from test_add_layer import Fly, hash_multi_layer
 
 
-class Fly:
-    def __init__(self, pn_size, kc_size=None, wta=None, num_proj=None, num_nonzero=None, init_type=3):
-        self.kc_size = kc_size
-        self.wta = num_nonzero / kc_size * 100
-        self.projections = self.create_projections(num_proj, pn_size, init_type=init_type)
-        self.val_scores = [0, 0, 0]
-        self.kc_score = 1 / np.log10(int(self.kc_size * self.wta / 100))
-        self.is_evaluated = False
-
-    def create_projections(self, proj_size, pn_size, init_type):
-        weight_mat = np.zeros((self.kc_size, pn_size))
-
-        # uniformly random init
-        if init_type == 0:
-            for i in range(self.kc_size):
-                for j in np.random.randint(pn_size, size=proj_size):
-                    weight_mat[i, j] = 1
-
-        # uniformly random init, cover all vocab
-        elif init_type == 1:
-            idx = list(range(pn_size))
-            c = 0
-            while c < self.kc_size:
-                random.shuffle(idx)
-                for i in range(0, len(idx), proj_size):
-                    p = idx[i:i + proj_size]
-                    for j in p:
-                        weight_mat[c][j] = 1
-                    c += 1
-                    if c >= self.kc_size:
-                        break
-
-        # frequent words have more chance to form projections
-        # in the vocab list, more frequent words appears on top
-        # create a probability distribution on idx, then sample from the distribution
-        elif init_type == 2:
-            pn_idx = np.arange(50, pn_size)  # ignore punctuations, stop words, etc.
-            prob_dist = (1 / pn_idx) / np.sum(1 / pn_idx)
-            proj_idx = [([i] * proj_size, np.random.choice(pn_idx, proj_size, p=prob_dist))
-                        for i in range(self.kc_size)]
-            rows, cols = zip(*proj_idx)
-            weight_mat[rows, cols] = 1
-
-        # frequent words have more chance to form projections
-        # cover all the vocab
-        else:
-            idx = list(range(pn_size))
-            c = 0
-            while c < self.kc_size:
-                idx_1, idx_2 = idx[:int(0.1*len(idx))], idx[int(0.1*len(idx)):]
-                idx_shuffle = random.sample(idx_1, len(idx_1)) + random.sample(idx_2, len(idx_2))
-                for i in range(0, len(idx_shuffle), proj_size):
-                    p = idx_shuffle[i:i + proj_size]
-                    for j in p:
-                        weight_mat[c][j] = 1
-                    c += 1
-                    if c >= self.kc_size:
-                        break
-
-        return lil_matrix(weight_mat)
-
-    def get_vocab_coverage(self):
-        ps = self.projections.toarray()
-        zs = np.where(~ps.any(axis=1))[0]
-        return 1 - (zs.shape[0] / self.kc_size)
-
-
-def fruitfly_pipeline(top_word, KC_size, proj_size, num_nonzero,
-                      C, num_iter, num_trial):
+def fruitfly_pipeline(top_word, KC_size_0, KC_size_1, proj_size_0, proj_size_1,
+                      num_nonzero_0, num_nonzero_1, C, num_iter, num_trial):
     def _hash_n_train(fly):
-        hash_train = hash_dataset_(dataset_mat=train_set, weight_mat=fly.projections,
-                                   percent_hash=fly.wta, top_words=top_word)
-        hash_val = hash_dataset_(dataset_mat=val_set, weight_mat=fly.projections,
-                                 percent_hash=fly.wta, top_words=top_word)
-        val_score, model = train_model(m_train=hash_train, classes_train=train_label,
-                                       m_val=hash_val, classes_val=val_label,
+        hash_train = hash_multi_layer(dataset_mat=train_set,
+                                      weight_list=fly.projection_list,
+                                      nonzero_list=fly.num_nonzero_list,
+                                      top_words=top_word)
+        hash_val = hash_multi_layer(dataset_mat=val_set,
+                                    weight_list=fly.projection_list,
+                                    nonzero_list=fly.num_nonzero_list,
+                                    top_words=top_word)
+        val_score, model = train_model(m_train=hash_train[-1], classes_train=train_label,
+                                       m_val=hash_val[-1], classes_val=val_label,
                                        C=C, num_iter=num_iter)
         return val_score, model
 
     print('creating projections')
-    fly_list = [Fly(pn_size=PN_SIZE, kc_size=KC_size,
-                    wta=None, num_proj=proj_size, num_nonzero=num_nonzero) for _ in range(num_trial)]
+    fly_list = [Fly(layer_size_list=[PN_SIZE, KC_size_0, KC_size_1],
+                    num_proj_list=[proj_size_0, proj_size_1],
+                    num_nonzero_list=[num_nonzero_0, num_nonzero_1],
+                    n_dataset=1,
+                    ) for _ in range(num_trial)]
 
     print('training')
     score_list, model_list = [], []
@@ -139,8 +70,8 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, num_nonzero,
 
     # select the max performance
     max_idx = np.argmax(score_list)
-    save_name = 'kc' + str(KC_size) + '_proj' + str(proj_size) +\
-                '_top' + str(top_word) + '_nonzero' + str(num_nonzero) + '_C' + str(C) + \
+    save_name = 'kc0' + str(KC_size_0) + 'kc1' + str(KC_size_1) + '_proj0' + str(proj_size_0) + '_proj1' + str(proj_size_1) +\
+                '_top' + str(top_word) + '_nonzero0' + str(num_nonzero_0) + '_nonzero1' + str(num_nonzero_1) + '_C' + str(C) + \
                 '_iter' + str(num_iter) + '_score' + str(score_list[max_idx])[2:]  # remove 0.
     global max_val_score
     if score_list[max_idx] > max_val_score:
@@ -156,33 +87,31 @@ def fruitfly_pipeline(top_word, KC_size, proj_size, num_nonzero,
 
     # write the std
     with open(f'./log/logs_{dataset_name}.tsv', 'a') as f:
-        f.writelines('\t'.join(str(i) for i in [KC_size, proj_size, top_word,
-                                                num_nonzero, C, num_iter, avg_score, std_score]))
+        f.writelines('\t'.join(str(i) for i in [KC_size_0, KC_size_1, proj_size_0, proj_size_1, top_word,
+                                                num_nonzero_0, num_nonzero_1, C, num_iter, avg_score, std_score]))
         f.writelines('\n')
 
     return avg_score
 
 
 def optimize_fruitfly(continue_log):
-    def _classify(topword, KC_size, proj_size, C):
+    def _classify(topword, KC_size_0, KC_size_1, proj_size_0, proj_size_1, C):
         topword = round(topword)
-        KC_size = round(KC_size)
-        proj_size = round(proj_size)
-        num_iter=2000
+        KC_size_0, KC_size_1 = round(KC_size_0), round(KC_size_1)
+        proj_size_0, proj_size_1 = round(proj_size_0), round(proj_size_1)
+        num_iter = 2000
         num_trial = 3
-        num_nonzero = 300
-        percent_hash = num_nonzero / KC_size * 100
-        # if dataset_name == '20news':
-        #     num_iter = 2000  # 50 wos wiki, 2000 20news
-        print(f'--- KC_size {KC_size}, proj_size {proj_size}, '
-              f'top_word {topword}, wta {percent_hash}, C {C}, num_iter {num_iter} ---')
-        return fruitfly_pipeline(topword, KC_size, proj_size, num_nonzero,
+        num_nonzero_0, num_nonzero_1 = 300, 300
+
+        print(f'--- KC_size_0 {KC_size_0}, KC_size_1 {KC_size_1}, proj_size_0 {proj_size_0}, proj_size_1 {proj_size_1}, '
+              f'top_word {topword}, C {C}, num_iter {num_iter} ---')
+        return fruitfly_pipeline(topword, KC_size_0, KC_size_1, proj_size_0, proj_size_1, num_nonzero_0, num_nonzero_1,
                                  C, num_iter, num_trial)
 
     optimizer = BayesianOptimization(
         f=_classify,
-        pbounds={"topword": (400, 400.1), "KC_size": (300, 15000),
-                 "proj_size": (2, 20), "C": (1, 1.1)
+        pbounds={"topword": (100, 500), "KC_size_0": (300, 15000), "KC_size_1": (300, 15000),
+                 "proj_size_0": (2, 20), "proj_size_1": (2, 20), "C": (1, 100)
                  # "percent_hash": (5, 20),
                  # 'C':(C), 'num_iter':(num_iter)
                  },

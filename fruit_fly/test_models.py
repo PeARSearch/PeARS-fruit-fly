@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     # global variables
     sp = spm.SentencePieceProcessor()
-    sp.load('../spmcc.model')
+    sp.load('../spm/spmcc.model')
     vocab, reverse_vocab, logprobs = read_vocab()
     PN_size = len(vocab)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=False, token_pattern='[^ ]+')
