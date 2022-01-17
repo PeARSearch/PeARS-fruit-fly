@@ -94,7 +94,7 @@ def preprocess_wikipedia(train_p: float, val_p: float,
                     ID = int(ID.strip('"'))
                 elif l[:5] == "</doc":
                     if is_sp_encode:
-                        ll = sp.encode_as_pieces(doc)
+                        ll = sp.encode_as_pieces(doc.lower())
                         doc = ' '.join([wp for wp in ll])
                     mask = df_dataset['ID'] == ID
                     pos = np.flatnonzero(mask)[0]
@@ -215,7 +215,7 @@ def preprocess_wos(text_file: str, label_file: str, train_p: float, val_p: float
             if keep_meta:
                 doc += "<doc id="+str(label_idx)+" class="+label+">\n"
             if is_sp_encode:
-                doc += ' '.join([wp for wp in sp.encode_as_pieces(l)])+'\n'
+                doc += ' '.join([wp for wp in sp.encode_as_pieces(l.lower())])+'\n'
             else:
                 doc += l+'\n'
             if keep_meta:
@@ -335,7 +335,7 @@ def preprocess_20news(is_train: bool, keep_meta: bool, is_sp_encode: bool, sp_mo
             if keep_meta:
                 doc_n_meta += "<doc id="+file_ids[i]+" class="+folder+">\n"
             if is_sp_encode:
-                doc_n_meta += ' '.join([wp for wp in sp.encode_as_pieces(doc)])+'\n'
+                doc_n_meta += ' '.join([wp for wp in sp.encode_as_pieces(doc.lower())])+'\n'
             else:
                 doc_n_meta += doc
             if keep_meta:
