@@ -1,4 +1,4 @@
-## The dense fruit fly
+# The dense fruit fly
 
 This folder contains code to generate 'dense' fruit flies, i.e. fruit flies with a high WTA which will make them suitable for similarity calculations.
 
