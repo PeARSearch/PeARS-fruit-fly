@@ -67,7 +67,30 @@ class Fly:
         self.projections = lil_matrix(self.projections)
         self.kc_size+=num_new_rows
         return self.kc_size
-   
+  
+    def prune(self,train_set,val_set,train_label,val_label):
+        orig_score = self.val_score
+        last_pruned_score = self.val_score
+        current_pruned_score = self.val_score
+       
+        i = 0
+        while i < self.kc_size:
+            saved_projections = self.projections.copy()
+            self.projections = lil_matrix(np.delete(self.projections.todense(),[i],axis=0))
+            current_pruned_score, _ = self.evaluate(train_set,val_set,train_label,val_label)
+            if current_pruned_score < orig_score - 0.005: #if score has decreased too much
+                self.projections = saved_projections #revert to old projections
+                self.val_score = last_pruned_score #revert to previous score
+                print("Keeping... Size remains",self.kc_size," (Low score:",current_pruned_score,")")
+                i+=1
+            else: #else update fly
+                if current_pruned_score >= last_pruned_score: #score may have increased from pruning
+                    last_pruned_score = current_pruned_score
+                self.kc_size-=1
+                self.val_score = current_pruned_score
+                print("Pruned... New size",self.kc_size,"with score",current_pruned_score)
+        print("Pruned fly. Score:",self.val_score,"KC size:",self.kc_size)
+        return self.val_score, self.kc_size
 
     def projection_store(self,proj_store):
         weight_mat = np.zeros((self.kc_size, self.pn_size))
