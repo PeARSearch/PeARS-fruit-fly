@@ -8,15 +8,14 @@ from scipy.sparse import hstack, vstack, lil_matrix, coo_matrix
 
 from classify import train_model
 from sklearn.metrics import pairwise_distances
-from bo_utils import read_vocab, hash_dataset_, append_as_json, get_stats
+from utils import read_vocab, hash_dataset_
 
 class Fly:
-    def __init__(self, pn_size=None, kc_size=None, wta=None, proj_size=None, top_words=None, init_method=None, eval_method=None, proj_store=None, hyperparameters=None):
+    def __init__(self, pn_size=None, kc_size=None, wta=None, proj_size=None, init_method=None, eval_method=None, proj_store=None, hyperparameters=None):
         self.pn_size = pn_size
         self.kc_size = kc_size
         self.wta = wta
         self.proj_size = proj_size
-        self.top_words = top_words
         self.init_method = init_method
         self.eval_method = eval_method
         self.hyperparameters = hyperparameters
@@ -28,8 +27,8 @@ class Fly:
         self.projections = lil_matrix(weight_mat)
         self.val_score = 0
         self.is_evaluated = False
-        self.kc_use = None
-        self.kc_sorted = None
+        self.kc_use_sorted = None
+        self.kc_in_hash_sorted = None
         #print("INIT",self.kc_size,self.proj_size,self.wta,self.get_coverage())
 
     def create_projections(self,proj_size):
@@ -67,7 +66,38 @@ class Fly:
         self.projections = lil_matrix(self.projections)
         self.kc_size+=num_new_rows
         return self.kc_size
-  
+ 
+    def prune2(self,train_set,val_set,train_label,val_label):
+        orig_score = self.val_score
+        current_pruned_score = self.val_score
+        init_pruning_num = int(5 * self.kc_size / 100)
+        i = 0
+        print("ORIGINAL VAL SCORE:",orig_score)
+        for i in range(10):
+            kcs = self.kc_use_sorted[-init_pruning_num:] #replace least used kcs
+            self.projections = lil_matrix(np.delete(self.projections.todense(),[kcs],axis=0))
+            self.kc_size = self.kc_size - init_pruning_num
+            self.grow(init_pruning_num)
+            current_pruned_score, kc_in_use_sorted, kc_in_hash_sorted = self.evaluate(train_set,val_set,train_label,val_label)
+            self.val_score = current_pruned_score
+            self.kc_use_sorted = kc_in_use_sorted
+            self.kc_in_hash_sorted = kc_in_hash_sorted
+            print("SCORE AFTER REPLACING", init_pruning_num, "LOW USE SCORE KCS:",self.val_score)
+            
+            #kcs = self.kc_in_hash_sorted[:init_pruning_num] #prune highest hash freqs
+            #self.projections = lil_matrix(np.delete(self.projections.todense(),[kcs],axis=0))
+            #current_pruned_score, kc_in_use_sorted, kc_in_hash_sorted = self.evaluate(train_set,val_set,train_label,val_label)
+            #self.val_score = current_pruned_score
+            #self.kc_use_sorted = kc_in_use_sorted
+            #self.kc_in_hash_sorted = kc_in_hash_sorted
+            #self.kc_size = self.kc_size - init_pruning_num
+            #print("SCORE AFTER REMOVING", init_pruning_num, "HIGH HASH USE SCORE KCS:",self.val_score)
+
+        print("Pruned fly. Score:",self.val_score,"KC size:",self.kc_size)
+        return self.val_score, self.kc_size
+
+
+
     def prune(self,train_set,val_set,train_label,val_label):
         orig_score = self.val_score
         last_pruned_score = self.val_score
@@ -77,11 +107,11 @@ class Fly:
         while i < self.kc_size:
             saved_projections = self.projections.copy()
             self.projections = lil_matrix(np.delete(self.projections.todense(),[i],axis=0))
-            current_pruned_score, _ = self.evaluate(train_set,val_set,train_label,val_label)
+            current_pruned_score, kc_in_use_sorted, kc_in_hash_sorted = self.evaluate(train_set,val_set,train_label,val_label)
             if current_pruned_score < orig_score - 0.005: #if score has decreased too much
                 self.projections = saved_projections #revert to old projections
                 self.val_score = last_pruned_score #revert to previous score
-                print("Keeping... Size remains",self.kc_size," (Low score:",current_pruned_score,")")
+                print("Keeping dim... Size remains",self.kc_size," (Low score:",current_pruned_score,")")
                 i+=1
             else: #else update fly
                 if current_pruned_score >= last_pruned_score: #score may have increased from pruning
@@ -132,24 +162,25 @@ class Fly:
 
     def evaluate(self,train_set,val_set,train_label,val_label):
         hash_val, kc_use_val, kc_sorted_val = hash_dataset_(dataset_mat=val_set, weight_mat=self.projections,
-                                 percent_hash=self.wta, top_words=self.top_words)
+                                 percent_hash=self.wta)
         if self.eval_method == "classification":
             #We only need the train set for classification, not similarity
             hash_train, kc_use_train, kc_sorted_train = hash_dataset_(dataset_mat=train_set, weight_mat=self.projections,
-                                   percent_hash=self.wta, top_words=self.top_words)
+                                   percent_hash=self.wta)
             self.val_score, _ = train_model(m_train=hash_train, classes_train=train_label,
                                        m_val=hash_val, classes_val=val_label,
                                        C=self.hyperparameters['C'], num_iter=self.hyperparameters['num_iter'])
         if self.eval_method == "similarity":
-            self.val_score, _ = self.prec_at_k(m_val=hash_val, classes_val=val_label, k=self.hyperparameters['num_nns'])
+            self.val_score, kc_in_hash_sorted = self.prec_at_k(m_val=hash_val, classes_val=val_label, k=self.hyperparameters['num_nns'])
+            self.kc_in_hash_sorted = list(kc_in_hash_sorted)
         self.is_evaluated = True
         #print("\nCOVERAGE:",self.get_coverage())
-        #print("SCORE:",self.val_score)
-        self.kc_use = kc_use_val / np.sum(kc_use_val)
-        self.kc_sorted = list(kc_sorted_val)
+        print("SCORE:",self.val_score)
+        #self.kc_use = kc_use_val / np.sum(kc_use_val)
+        self.kc_use_sorted = list(kc_sorted_val)
         #print("PROJECTIONS:",self.print_projections())
         #print("KC USE:",np.sort(self.kc_use)[::-1][:20])
-        return self.val_score,self.kc_sorted[:10]
+        return self.val_score, self.kc_use_sorted, self.kc_in_hash_sorted
 
     def compute_nearest_neighbours(self,hammings,labels,i,num_nns):
         i_sim = np.array(hammings[i])
@@ -162,11 +193,16 @@ class Fly:
 
     def prec_at_k(self,m_val=None,classes_val=None,k=None):
         hammings = 1-pairwise_distances(m_val.todense(), metric="hamming")
+        kc_hash_use = np.zeros(m_val.shape[1])
         scores = []
         for i in range(hammings.shape[0]):
             score, neighbours = self.compute_nearest_neighbours(hammings,classes_val,i,k)
+            for idx in m_val[i].indices:
+                kc_hash_use[idx]+=1
             scores.append(score)
-        return np.mean(scores), scores
+        kc_hash_use = kc_hash_use / sum(kc_hash_use)
+        kc_sorted_hash_use = np.argsort(kc_hash_use)[:-kc_hash_use.shape[0]-1:-1] #Give sorted list from most to least used KCs
+        return np.mean(scores), kc_sorted_hash_use
 
     def print_projections(self):
         words = ''

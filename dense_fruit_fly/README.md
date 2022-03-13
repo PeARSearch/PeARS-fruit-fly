@@ -1,15 +1,19 @@
 # The dense fruit fly
 
-This folder contains code to generate 'dense' fruit flies, i.e. fruit flies with a high WTA which will make them suitable for similarity calculations.
+This folder contains code to generate 'dense' fruit flies, i.e. fruit flies with a small number of KCs, issued from a dimensionality-reduced UMAP model. These fruit flies are trained on the prec@k evaluation: given one document in the val set, i.e. the fraction of the first *k* nearest neighbours that belong the same class as the document. 
 
-To run a hyperparameter search, do:
+To train a UMAP model, do:
 
-    hyperparam_search.py --dataset=<str> [--continue_log=<filename>] (--random|--store) (--classification|--similarity)
+    umap_search.py --dataset=<wiki|20news|wos> 
 
-For example:
+Once the best UMAP model has been found and saved, we can proceed to the training of the fruit fly, doing:
 
-    python3 hyperparam_search.py --dataset=wos --random --similarity
+    fly_search.py --dataset=<wiki|20news|wos> --logprob=<n>
 
-will run the optimization for the Web of Science dataset, with flies initialized randomly and evaluated using similarity.
+The logprob figure should be the one returned by *umap_search.py* in the best set of hyperparameters. NB: ideally we should save this in the fly itself. TODO.
 
-When using the --store flag, flies will be created using pre-computed projections from the directory *projection_store* in the root folder. Make sure that the pbounds parameters set for the Bayesian Optimization use a range of projection sizes for which files exist in *projection_store*. (The pbounds have to be set manually inside *hyperparam_search.py*.
+Finally, the best saved fly can be evaluated on the test set, using both the prec@k evaluation and a classification task:
+
+    test_fly.py --dataset=<wiki|20news|wos> --logprob=<n>
+
+(Same comment here about the logprob value.)
