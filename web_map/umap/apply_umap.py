@@ -12,10 +12,11 @@ Options:
 
 
 import os
-from os.path import join
+from os.path import join, exists
 import re
 import umap
 import joblib
+import pickle
 from glob import glob
 import sentencepiece as spm
 import numpy as np
@@ -42,53 +43,71 @@ def train_clustering(m):
     joblib.dump(brc, filename)
 
 
-def apply_clustering(brc,m,m_cats):
+def apply_clustering(brc,m,m_cats,spf):
+    print('--- Cluster matrix using pretrained Birch ---')
     #Cluster points in matrix m, in batches of 20k
-    m = m.todense()
     idx2clusters = list(brc.predict(m[:20000,:]))
+    clusters2idx = {}
+    m = m.todense()
 
     for i in range(20000,m.shape[0],20000):
         print("Clustering",i,"to",i+20000)
         idx2clusters.extend(list(brc.predict(m[i:i+20000,:])))
 
+    print('--- Save Birch output in cl2cats and cl2idx pickled files (./processed folder) ---')
     #Count items in each cluster, using labels for whole data
     cluster_counts = Counter(idx2clusters)
     print(len(idx2clusters),cluster_counts)
 
-    #Make a dictionary of clusters
-    #Key = cluster, value = list of all doc categories for that cluster
-    clusters2cats = {}
-    clusters = {}
+    #Make dictionary clusters to idx
     for cl in cluster_counts:
-        clusters2cats[cl] = []
-        clusters[cl] = []
+        clusters2idx[cl] = []
     for idx,cl in enumerate(idx2clusters):
-        clusters2cats[cl].append(m_cats[idx])
-        clusters[cl].append(idx)
+        clusters2idx[cl].append(idx)
+    
+    #Make a dictionary clusters to list of categories
+    clusters2cats = {}
+    for cl,idx in clusters2idx.items():
+        cats = [m_cats[i] for i in idx]
+        clusters2cats[cl] = cats
+    
+    pklf = spf.replace('sp','cl2cats.pkl')
+    with open(pklf, 'wb') as f:
+        pickle.dump(clusters2cats,f)
+    
+    pklf = spf.replace('sp','cl2idx.pkl')
+    with open(pklf, 'wb') as f:
+        pickle.dump(clusters2idx,f)
+
+
+def label_clusters():
+    #Merge all cl2cats dictionary files
+    cl2cats_files = glob(join('./processed','*.cl2cats.pkl'))
+    clusters2cats = pickle.load(open(cl2cats_files[0],'rb'))
+
+    for f in cl2cats_files[1:]:
+        tmp = pickle.load(open(f,'rb'))
+        for cl,cats in tmp.items():
+            clusters2cats[cl].extend(cats)
 
     #Associate a single category label with each cluster
     cluster_cats = {}
-    just_counts = []
     for k,v in clusters2cats.items():
-        #print(k,cluster_counts[k],' | '.join(s for s in v))
         keywords = []
         for cat in v:
             keywords.extend(cat.split())
         c = Counter(keywords)
-        category = ' '.join([pair[0] for pair in c.most_common()[:5]])
-        #print(k,cluster_counts[k],c.most_common()[:5])
-        print(k,cluster_counts[k],category, np.sum(m[clusters[k]], axis=0) / len(clusters[k]))
+        category = ' '.join([pair[0]+' ('+str(pair[1])+')' for pair in c.most_common()[:5]])
+        #print(k,category, np.sum(m[clusters[k]], axis=0) / len(clusters[k]))
+        print(k,category)
         cluster_cats[k] = category
-        just_counts.append(cluster_counts[k])
 
-    #Rewrite idx2clusters to use the category names
-    #idx2clusters = [cluster_cats[cl] for cl in idx2clusters]
-
-    print("MEAN CLUSTER SIZE:",np.mean(just_counts), np.std(just_counts))
-    return idx2clusters, cluster_cats
+    return cluster_cats
 
 
-def train_umap(logprob_power=7, umap_nns=5, umap_min_dist=0.1, umap_components=2):
+#The default values here are from the BO on our Wikipedia dataset. Alternative in 2D for plotting.
+#def train_umap(logprob_power=7, umap_nns=5, umap_min_dist=0.1, umap_components=2):
+def train_umap(logprob_power=7, umap_nns=16, umap_min_dist=0.0, umap_components=31):
     print('--- Training UMAP ---')
     train_set, train_labels = read_n_encode_dataset(dataset, vectorizer, logprobs, logprob_power)
     train_set = train_set.todense()[:20000]
@@ -105,6 +124,7 @@ def train_umap(logprob_power=7, umap_nns=5, umap_min_dist=0.1, umap_components=2
 
 
 def apply_umap(umap_model,dataset):
+    print('\n---Applying UMAP to ',dataset)
     logprob_power=7
     data_set, data_labels = read_n_encode_dataset(dataset, vectorizer, logprobs, logprob_power)
     scaler = preprocessing.MinMaxScaler().fit(data_set.todense())
@@ -117,7 +137,10 @@ def apply_umap(umap_model,dataset):
         #print(m.shape,m2.shape)
         m = vstack((m,m2))
         #print("New m shape:",m.shape)
-    data_set = np.nan_to_num(m).todense()
+    data_set = np.nan_to_num(m)
+    
+    dfile = dataset.replace('.sp','.umap.m')
+    joblib.dump(data_set, dfile)
     return data_set, data_labels
 
 
@@ -154,7 +177,7 @@ def run_fly():
 if __name__ == '__main__':
     args = docopt(__doc__, version='Wikipedia clustering, 0.1')
     dataset = args["--dataset"]
-    train = True
+    train = False
     spm_vocab = "../../spm/spm.wiki.vocab"
     
     # global variables
@@ -172,13 +195,10 @@ if __name__ == '__main__':
     
     sp_files = glob(join('./processed','*.sp'))
 
-    m, m_labels = apply_umap(umap_model,sp_files[0])
-    for spf in sp_files[1:2]:
-        print('\n---Applying UMAP to ',spf)
-        m2, m2_labels = apply_umap(umap_model,spf)
-        m = vstack((m,m2))
-        m_labels.extend(m2_labels)
-        print(m.shape)
+    for spf in sp_files:
+        if not exists(spf.replace('.sp','.umap.m')):
+            m, m_labels = apply_umap(umap_model,spf)
+            print("Output matrix shape:", m.shape)
+            apply_clustering(birch_model,m,m_labels,spf)
 
-    apply_clustering(birch_model,m,m_labels)
-
+    label_clusters()
