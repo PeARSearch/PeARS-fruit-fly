@@ -66,8 +66,8 @@ def wta_vectorized(feature_mat, k, percent=True):
 
 def read_n_encode_dataset(path, vectorizer, logprobs, power):
     # read
-    stopwords = ['of', 'in', 'and', 'the', 'at', 'from', 'by', 'with']
-    doc_list, label_list = [], []
+    stopwords = ['of', 'in', 'and', 'the', 'at', 'from', 'by', 'with', 'for', 'to', 'de', 'a']
+    doc_list, title_list, label_list = [], [], []
     doc = ""
     with open(path) as f:
         for l in f:
@@ -75,6 +75,7 @@ def read_n_encode_dataset(path, vectorizer, logprobs, power):
             if l[:4] == "<doc":
                 m = re.search(".*title=\"([^\"]*)\"", l)
                 title = m.group(1).lower()
+                title_list.append(title)
                 m = re.search(".*categories=\"([^\"]*)\"", l)
                 categories = m.group(1).replace('|',' ').lower()
                 keywords = title.split()+categories.split()
@@ -92,7 +93,7 @@ def read_n_encode_dataset(path, vectorizer, logprobs, power):
     X = csr_matrix(X)
     X = X.multiply(logprobs)
 
-    return X, label_list
+    return X, title_list, label_list
 
 
 def write_as_json(dic, f):
