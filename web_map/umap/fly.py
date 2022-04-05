@@ -131,9 +131,12 @@ class Fly:
         else:
             return np.sum(self.val_scores)
 
+    def hash(self,train_set,val_set,train_label,val_label):
+        hash_val, kc_use_val, kc_sorted_val = hash_dataset_(dataset_mat=val_set, weight_mat=self.projections, percent_hash=self.wta, top_words=self.top_words)
+        return hash_val, kc_use_val, kc_sorted_val
+
     def evaluate(self,train_set,val_set,train_label,val_label):
-        hash_val, kc_use_val, kc_sorted_val = hash_dataset_(dataset_mat=val_set, weight_mat=self.projections,
-                                 percent_hash=self.wta, top_words=self.top_words)
+        hash_val, kc_use_val, kc_sorted_val = self.hash(train_set,val_set,train_label,val_label)
         if self.eval_method == "classification":
             #We only need the train set for classification, not similarity
             hash_train, kc_use_train, kc_sorted_train = hash_dataset_(dataset_mat=train_set, weight_mat=self.projections,

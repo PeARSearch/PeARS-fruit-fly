@@ -3,6 +3,7 @@ import json
 import pickle
 import numpy as np
 from scipy.sparse import csr_matrix, vstack
+from scipy.spatial.distance import cdist
 from sklearn.metrics import pairwise_distances
 from os.path import exists
 
@@ -63,6 +64,12 @@ def wta_vectorized(feature_mat, k, percent=True):
     feature_mat[is_smaller_than_kth] = 0
     return feature_mat
 
+def encode_docs(doc_list, vectorizer, logprobs, power):
+    logprobs = np.array([logprob ** power for logprob in logprobs])
+    X = vectorizer.fit_transform(doc_list)
+    X = csr_matrix(X)
+    X = X.multiply(logprobs)
+    return X
 
 def read_n_encode_dataset(path, vectorizer, logprobs, power):
     # read
@@ -88,11 +95,7 @@ def read_n_encode_dataset(path, vectorizer, logprobs, power):
                 doc += l + ' '
 
     # encode
-    logprobs = np.array([logprob ** power for logprob in logprobs])
-    X = vectorizer.fit_transform(doc_list)
-    X = csr_matrix(X)
-    X = X.multiply(logprobs)
-
+    X = encode_docs(doc_list, vectorizer, logprobs, power)
     return X, title_list, label_list
 
 
@@ -133,4 +136,7 @@ def hash_dataset_(dataset_mat, weight_mat, percent_hash, top_words):
     hs = (hs > 0).astype(np.int_)
     return hs, kc_use, kc_sorted_ids
 
-
+def hamming_cdist(matrix, vector):
+    #Compute the hamming distances between each row of matrix and vector.
+    v = vector.reshape(1, -1)
+    return cdist(matrix, v, 'hamming').reshape(-1)
