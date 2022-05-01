@@ -25,6 +25,8 @@ from glob import glob
 import numpy as np
 from datetime import datetime
 from docopt import docopt
+from joblib import Parallel, delayed,dump
+import multiprocessing
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
 from sklearn.cluster import Birch
@@ -90,8 +92,36 @@ def apply_clustering(brc=None, spf=None, save=True):
             pickle.dump(clusters2idx,f)
 
 
+def generate_cluster_centroids():
+    cl2idx_files = glob(join('./processed','*.cl2idx.pkl'))
+    clusters2size = {}
+    clusters2vecs = {}
+
+    for f in cl2idx_files:
+        cl2idx = pickle.load(open(f,'rb'))
+        m = joblib.load(f.replace('.cl2idx.pkl','.umap.m'))
+        for cl,idx in cl2idx.items():
+            if cl in clusters2size:
+                clusters2size[cl]+=len(idx)
+            else:
+                clusters2size[cl] = len(idx)
+                clusters2vecs[cl] = np.zeros(umap_dim)
+
+            for i in idx:
+                clusters2vecs[cl]+=m[i]
+
+    cm = np.zeros((len(clusters2vecs),umap_dim))
+    for cl in clusters2size:
+        cm[cl] = clusters2vecs[cl] / clusters2size[cl]
+
+
+    return cm
+
+
+
 def generate_cluster_labels(verbose=False):
     #Merge all cl2titles dictionary files
+    print('--- Generating cluster labels ---')
     stopwords = ['of', 'in', 'and', 'the', 'at', 'from', 'by', 'with', 'for', 'to', 'de', 'a']
     cl2titles_files = glob(join('./processed','*.cl2titles.pkl'))
     clusters2titles = pickle.load(open(cl2titles_files[0],'rb'))
@@ -111,7 +141,8 @@ def generate_cluster_labels(verbose=False):
         for title in v:
             keywords.extend([w for w in title.split() if w not in stopwords])
         c = Counter(keywords)
-        category = ' '.join([pair[0]+' ('+str(pair[1])+')' for pair in c.most_common()[:5]])
+        #category = ' '.join([pair[0]+' ('+str(pair[1])+')' for pair in c.most_common()[:5]])
+        category = ' '.join([pair[0] for pair in c.most_common()[:5]])
         if verbose:
             print('\n',k,len(v),category,'\n',v[:20])
         cluster_titles[k] = category
@@ -163,19 +194,31 @@ def train_models():
     train_clustering(m)
 
 
-def plot_clusters():
-    idx2clusters, cluster_cats = cluster(train_set,train_label)
-    print(len(idx2clusters))
+def plot_cluster_centroids(centroids, cluster_labels):
+    scaler = preprocessing.MinMaxScaler().fit(centroids)
+    centroids = scaler.transform(centroids)
+    cl_names = [cluster_labels[cl] for cl in range(centroids.shape[0])]
+    cosines = 1-pairwise_distances(centroids, metric="cosine")
+    
+    for i in range(len(cosines)):
+        i_sim = np.array(cosines[i])
+        i_label = cl_names[i]
+        ranking = np.argsort(-i_sim)
+        neighbours = [cl_names[n] for n in ranking][1:11] #don't count first neighbour which is itself
+        print(i_label,neighbours)
+    
+    centroids_2d = umap.UMAP(n_neighbors=5, min_dist=0.1, n_components=2, metric='hellinger', random_state=32).fit_transform(centroids)
 
-    plt.figure(figsize=(12,8))
-    train_set = np.array(train_set)
-    cl_names = list(set([cluster_cats[cl] for cl in idx2clusters]))
-    scatter = plt.scatter(train_set[:, 0], train_set[:, 1], s= 5, c=idx2clusters, cmap='nipy_spectral')
-    plt.title('Embedding of the '+dataset+' training set by UMAP', fontsize=14)
-    #plt.legend(handles=scatter.legend_elements()[0], labels=cl_names, title="Categories")
-    plt.savefig("./umap.png")
+    plt.figure(figsize=(20,40))
+    scatter = plt.scatter(centroids_2d[:, 0], centroids_2d[:, 1], s= 5, cmap='nipy_spectral')
+    plt.title('Centroids', fontsize=14)
+    for i, txt in enumerate(cl_names):
+        plt.annotate(i, (centroids_2d[i][0], centroids_2d[i][1]))
+        print(i,txt)
+    plt.savefig("centroids.png")
 
 def umap_prec_at_k(spf, k):
+    '''Compute precision at k using cluster IDs from Birch model'''
     train_set, train_titles, train_labels = read_n_encode_dataset(spf, vectorizer, logprobs, logprob_power)
     cl2idx = pickle.load(open(spf.replace('sp','cl2idx.pkl'),'rb'))
     idx2cl = {}
@@ -204,7 +247,7 @@ def sanity_check(hashed_data, titles, cats):
         for n in neighbours:
             print(n)
 
-def train_fly(dataset, kc_size, wta, proj_size, k, cluster_labels):
+def train_fly(dataset, kc_size, wta, proj_size, k, cluster_labels, num_trial):
     train_set, train_titles, train_labels = read_n_encode_dataset(dataset, vectorizer, logprobs, logprob_power)
     umap_mat = joblib.load(dataset.replace('.sp','.umap.m'))
     cl2idx = pickle.load(open(dataset.replace('sp','cl2idx.pkl'),'rb'))
@@ -219,10 +262,18 @@ def train_fly(dataset, kc_size, wta, proj_size, k, cluster_labels):
     eval_method = "similarity"
     proj_store = None
     hyperparameters = {'C':100,'num_iter':200,'num_nns':k}
-    fly = Fly(pn_size, kc_size, wta, proj_size, top_words, init_method, eval_method, proj_store, hyperparameters)
-    score, hashed_data = fly.evaluate(umap_mat,umap_mat,umap_labels,umap_labels)
+    #fly = Fly(pn_size, kc_size, wta, proj_size, top_words, init_method, eval_method, proj_store, hyperparameters)
+    fly_list = [Fly(pn_size, kc_size, wta, proj_size, top_words, init_method, eval_method, proj_store, hyperparameters) for _ in range(num_trial)]
+    '''Compute precision at k using cluster IDs from Birch model'''
+    #score, hashed_data = fly.evaluate(umap_mat,umap_mat,umap_labels,umap_labels)
+    with Parallel(n_jobs=max_thread, prefer="threads") as parallel:
+        delayed_funcs = [delayed(lambda x:x.evaluate(umap_mat,umap_mat,umap_labels,umap_labels))(fly) for fly in fly_list]
+        scores = parallel(delayed_funcs)
+    score_list = np.array([p[0] for p in scores])
+    print(score_list)
+    best = np.argmax(score_list)
     #sanity_check(hashed_data,train_titles,umap_labels)
-    return score, fly
+    return score_list[best], fly_list[best]
 
 def apply_fly(spf,fly_path):
     data_set, data_titles, data_labels = read_n_encode_dataset(spf, vectorizer, logprobs, logprob_power)
@@ -234,7 +285,19 @@ def apply_fly(spf,fly_path):
             idx2cl[i] = cluster_labels[cl]
     umap_labels = [idx2cl[i] for i in range(len(idx2cl))]
     fly = joblib.load(fly_path)
+    #Compute precision at k using cluster IDs from Birch model
     score, hashed_data = fly.evaluate(umap_mat,umap_mat,umap_labels,umap_labels)
+
+    #Save hashes 
+    title2hash = {}
+    for i in range(hashed_data.shape[0]):
+        b = hashed_data[i][0].todense()
+        #Transform long binary array into an int
+        bin_id = b.dot(2**np.arange(b.size)[::-1])[0,0]
+        #print(bin_id,data_titles[i],umap_labels[i])
+        title2hash[data_titles[i]] = bin_id
+    hfile = spf.replace('.sp','.fh')
+    joblib.dump(title2hash, hfile)
     return score
 
 
@@ -255,6 +318,8 @@ if __name__ == '__main__':
     vocab, reverse_vocab, logprobs = read_vocab(spm_vocab)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
     logprob_power=7 #From experiments on wiki dataset
+    umap_dim=31
+    max_thread = int(multiprocessing.cpu_count() * 0.2)
 
     if train:
         print('Dataset name:', dataset)
@@ -267,14 +332,16 @@ if __name__ == '__main__':
         sp_files = glob(join('./processed','*.sp'))
         for spf in sp_files:
             if not exists(spf.replace('.sp','.umap.m')):
-                m, m_titles, m_labels = apply_umap(umap_model,spf,True)
+                m, _, _ = apply_umap(umap_model,spf,True)
                 print("Output matrix shape:", m.shape)
                 apply_clustering(birch_model,spf,True)
 
     elif label_clusters:
         cluster_labels = generate_cluster_labels(verbose=True)
+        centroids = generate_cluster_centroids()
         for k,v in cluster_labels.items():
-            print(k,v)
+            print(k,v,centroids[k])
+        plot_cluster_centroids(centroids, cluster_labels)
 
     elif fly:
         k = 20
@@ -282,7 +349,7 @@ if __name__ == '__main__':
         print('\n--- Generating cluster labels for fly training ---')
         cluster_labels = generate_cluster_labels(verbose=False)
         print('\n---Training fruit fly ---')
-        fly_score, fly = train_fly(dataset, 512, 10, 10, k, cluster_labels)
+        fly_score, fly = train_fly(dataset, 256, 50, 4, k, cluster_labels, 10)
         print("FLY SCORE FOR TRAIN SET ",k,":",fly_score)
         fly_path = './models/flies/'+dataset.split('/')[-1].replace('sp','fly.m')
         joblib.dump(fly,fly_path)
