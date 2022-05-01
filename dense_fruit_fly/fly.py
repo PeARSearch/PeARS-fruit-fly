@@ -182,13 +182,20 @@ class Fly:
         #print("KC USE:",np.sort(self.kc_use)[::-1][:20])
         return self.val_score, self.kc_use_sorted, self.kc_in_hash_sorted
 
-    def compute_nearest_neighbours(self,hammings,labels,i,num_nns):
+    def compute_nearest_neighbours(self, hammings,labels,i,num_nns):
         i_sim = np.array(hammings[i])
         i_label = labels[i]
         ranking = np.argsort(-i_sim)
         neighbours = [labels[n] for n in ranking][1:num_nns+1] #don't count first neighbour which is itself
-        score = sum([1 if n == i_label else 0 for n in neighbours]) / num_nns
-        #print(i,i_label,neighbours,score)
+        n_sum=0
+        for enu, n in enumerate(neighbours):
+            for lab in n:
+                if lab in i_label:
+                    n_sum+=1
+                    # print(enu, lab, i_label)
+                    break
+        score = n_sum / num_nns
+        # print(i,i_label,neighbours,score)
         return score,neighbours
 
     def prec_at_k(self,m_val=None,classes_val=None,k=None):
