@@ -55,7 +55,7 @@ def read_doc_wet(record):
 
 
 
-def write_from_wet(wet_url):
+def write_from_wet(wet_url,lang):
     print(wet_url)
     t = Timer()
     r = requests.get(wet_url, stream=True)
@@ -73,16 +73,16 @@ def write_from_wet(wet_url):
     file_path = "./processed_wet/"+file_path.replace(".gz",".xml")
     f = open(file_path,'w')
     for i,record in enumerate(records):
-        url, title, doc, lang = read_doc_wet(record)
+        url, title, doc, lg = read_doc_wet(record)
         if not doc or not url or len(doc) < 1000:
             continue
 
-        if record.rec_type == "conversion" and lang == 'en':
+        if record.rec_type == "conversion" and lg == lang:
             f.write("<doc url="+url+" title="+title.replace(' ','_')+" lang="+lang+">"+'\n')
             f.write(doc+'\n')
             f.write("</doc>"+'\n')
             n_documents += 1
-        if n_documents % 100 == 0:
+        if n_documents > 0 and n_documents % 100 == 0:
             print(i,"documents processed",n_documents,"documents added...")
     f.close()
     return file_path
@@ -91,10 +91,11 @@ if __name__ == '__main__':
     args = docopt(__doc__, version='Common Crawl Processor 0.1')
 
     f = open(args["--file"],'r')
+    lang = args["--lang"]
 
     for l in f:
         wet_url = l.rstrip('\n')
-        file_path = write_from_wet(wet_url)
+        file_path = write_from_wet(wet_url,lang)
 
         with open(file_path, 'rb') as f_in:
             with gzip.open(file_path+'.gz', 'wb') as f_out:

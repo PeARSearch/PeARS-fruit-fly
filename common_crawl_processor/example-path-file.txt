@@ -1,1 +1,1 @@
-https://commoncrawl.s3.amazonaws.com/crawl-data/CC-MAIN-2020-50/segments/1606141163411.0/wet/CC-MAIN-20201123153826-20201123183826-00000.warc.wet.gz
+https://data.commoncrawl.org/crawl-data/CC-MAIN-2020-50/segments/1606141163411.0/wet/CC-MAIN-20201123153826-20201123183826-00000.warc.wet.gz
