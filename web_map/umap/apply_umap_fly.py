@@ -1,9 +1,9 @@
 """Process Wikipedia with UMAP + Fruit Fly
 Usage:
-  apply_umap_fly.py train --dataset=<path> 
-  apply_umap_fly.py reduce --model=<path> 
+  apply_umap_fly.py train --dataset=<path>
+  apply_umap_fly.py reduce --model=<path>
   apply_umap_fly.py fly --model=<path> --dataset=<path>
-  apply_umap_fly.py label
+  apply_umap_fly.py label --lang=<lang>
   apply_umap_fly.py (-h | --help)
   apply_umap_fly.py --version
 
@@ -12,31 +12,31 @@ Options:
   --version                    Show version.
   --dataset=<path>             Path to wiki dump file (preprocessed with sentencepiece).
   --model=<path>               Path to pretrained UMAP model (in models/umap).
+  --lang=<lang>                Language of documents from wikipedia. e.g. pt
 """
 
 
-import os
 from os.path import join, exists
-import re
 import umap
 import joblib
+from pathlib import Path
 import pickle
 from glob import glob
+
+import nltk
 import numpy as np
-from datetime import datetime
 from docopt import docopt
-from joblib import Parallel, delayed,dump
+from joblib import Parallel, delayed
 import multiprocessing
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn import preprocessing
 from sklearn.cluster import Birch
-from sklearn.metrics import accuracy_score
 from sklearn.metrics import pairwise_distances
 from collections import Counter
+from nltk.corpus import stopwords
 
 from scipy.sparse import csr_matrix
-from scipy.sparse import hstack, vstack, lil_matrix, coo_matrix
-from scipy.spatial.distance import cdist
+from scipy.sparse import vstack
 from utils import read_vocab, hash_dataset_, read_n_encode_dataset, encode_docs
 import matplotlib.pyplot as plt
 from fly import Fly
@@ -114,7 +114,6 @@ def generate_cluster_centroids():
     for cl in clusters2size:
         cm[cl] = clusters2vecs[cl] / clusters2size[cl]
 
-
     return cm
 
 
@@ -122,7 +121,13 @@ def generate_cluster_centroids():
 def generate_cluster_labels(verbose=False):
     #Merge all cl2titles dictionary files
     print('--- Generating cluster labels ---')
-    stopwords = ['of', 'in', 'and', 'the', 'at', 'from', 'by', 'with', 'for', 'to', 'de', 'a']
+    # stop_words = ['of', 'in', 'and', 'the', 'at', 'from', 'by', 'with', 'for', 'to', 'de', 'a']
+    txt_f = open("langs_list.txt", "r")
+    dic={}
+    for line in txt_f:
+        line = line.rstrip("\n").split("\t")
+        dic[line[0]]=line[1]
+    stop_words=set(stopwords.words(dic[lang]))
     cl2titles_files = glob(join('./processed','*.cl2titles.pkl'))
     clusters2titles = pickle.load(open(cl2titles_files[0],'rb'))
 
@@ -139,7 +144,7 @@ def generate_cluster_labels(verbose=False):
     for k,v in clusters2titles.items():
         keywords = []
         for title in v:
-            keywords.extend([w for w in title.split() if w not in stopwords])
+            keywords.extend([w for w in title.split() if w not in stop_words])
         c = Counter(keywords)
         #category = ' '.join([pair[0]+' ('+str(pair[1])+')' for pair in c.most_common()[:5]])
         category = ' '.join([pair[0] for pair in c.most_common()[:5]])
@@ -162,6 +167,7 @@ def train_umap(logprob_power=7, umap_nns=16, umap_min_dist=0.0, umap_components=
     umap_model = umap.UMAP(n_neighbors=umap_nns, min_dist=umap_min_dist, n_components=umap_components, metric='hellinger', random_state=32).fit(train_set)
 
     dfile = dataset.split('/')[-1].replace('.sp','.umap')
+    Path("./models/umap").mkdir(exist_ok=True, parents=True)
     filename = './models/umap/'+dfile
     joblib.dump(umap_model, filename)
 
@@ -205,7 +211,7 @@ def plot_cluster_centroids(centroids, cluster_labels):
         i_label = cl_names[i]
         ranking = np.argsort(-i_sim)
         neighbours = [cl_names[n] for n in ranking][1:11] #don't count first neighbour which is itself
-        print(i_label,neighbours)
+        # print(i_label,neighbours)
     
     centroids_2d = umap.UMAP(n_neighbors=5, min_dist=0.1, n_components=2, metric='hellinger', random_state=32).fit_transform(centroids)
 
@@ -214,7 +220,7 @@ def plot_cluster_centroids(centroids, cluster_labels):
     plt.title('Centroids', fontsize=14)
     for i, txt in enumerate(cl_names):
         plt.annotate(i, (centroids_2d[i][0], centroids_2d[i][1]))
-        print(i,txt)
+        # print(i,txt)
     plt.savefig("centroids.png")
 
 def umap_prec_at_k(spf, k):
@@ -304,17 +310,20 @@ def apply_fly(spf,fly_path):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Wikipedia clustering, 0.1')
     if args["--dataset"]:
-        dataset = args["--dataset"]
+        dataset = args["--dataset"]+".sp"
+        lang = dataset.split("/")[-1][:2]
     if args["--model"]:
-        model_path = args["--model"]
+        model_path = args["--model"]+".umap"
+        lang = model_path.split("/")[-1][:2]
+    if args["--lang"]:
+        lang=args["--lang"]
     train = True if args["train"] else False
     reduce_and_cluster = True if args["reduce"] else False
     fly = True if args["fly"] else False
     label_clusters = True if args["label"] else False
     
-    
     # global variables
-    spm_vocab = "../../spm/spm.wiki.vocab"
+    spm_vocab = f"../../spm/spm.{lang}wiki.vocab"
     vocab, reverse_vocab, logprobs = read_vocab(spm_vocab)
     vectorizer = CountVectorizer(vocabulary=vocab, lowercase=True, token_pattern='[^ ]+')
     logprob_power=7 #From experiments on wiki dataset
@@ -326,7 +335,7 @@ if __name__ == '__main__':
         train_models()
 
     elif reduce_and_cluster:
-        umap_model = joblib.load(model_path+'.umap')
+        umap_model = joblib.load(model_path)
         birch_model = joblib.load(model_path.replace('.umap','.birch'))
         
         sp_files = glob(join('./processed','*.sp'))
@@ -339,8 +348,8 @@ if __name__ == '__main__':
     elif label_clusters:
         cluster_labels = generate_cluster_labels(verbose=True)
         centroids = generate_cluster_centroids()
-        for k,v in cluster_labels.items():
-            print(k,v,centroids[k])
+        # for k,v in cluster_labels.items():
+        #     print(k,v,centroids[k], "\n")
         plot_cluster_centroids(centroids, cluster_labels)
 
     elif fly:

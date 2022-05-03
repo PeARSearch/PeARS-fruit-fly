@@ -1,13 +1,12 @@
 """Get Wikipedia data for UMAP processing
 
 Usage:
-  get_wiki_data.py --lang=<str> --spm=<path>
+  get_wiki_data.py --lang=<str>
   get_wiki_data.py (-h | --help)
   get_wiki_data.py --version
 
 Options:
   --lang=<str>         The language of the Wikipedia to process.
-  --spm=<path>         Path to the spm model.
   -h --help            Show this screen.
   --version            Show version.
 
@@ -19,11 +18,9 @@ from os.path import join
 import pathlib
 import re
 import bz2
-import sys
-import gzip
 import pickle
-import shutil
 import requests
+from pathlib import Path
 import subprocess
 import sentencepiece as spm
 
@@ -47,6 +44,7 @@ def get_wiki_links(lang):
         match = re.findall(lang+'wiki-latest-pages-articles.xml.bz2', html) #For wikis with only one dump file.
     match = list(set(match))
 
+    Path("./wiki_dump_links").mkdir(exist_ok=True, parents=True)
     filename = "./wiki_dump_links/"+lang+"_wiki_dump_links.txt"
     outf = open(filename,'w')
     for url in match:
@@ -159,14 +157,14 @@ def apply_spm(bz2_file):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Apply UMAP to Wikipedia, ver 0.1')
     lang = args['--lang']
-    sp_model_path = args['--spm']
+    sp_model_path = f"../../spm/spm.{lang}wiki.model"
     sp = spm.SentencePieceProcessor()
     sp.load(sp_model_path)
 
     processed_dir = join(pathlib.Path(__file__).parent.resolve(),'processed')
     print(processed_dir)
 
-    #link_file = get_wiki_links(lang)
+    link_file = get_wiki_links(lang)
     wiki_paths = read_wiki_links(lang)
 
     for wiki_path in wiki_paths:

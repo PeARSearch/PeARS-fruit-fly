@@ -17,7 +17,7 @@ This folder contains code to process the whole of Wikipedia in any language of i
 
 We provide a script to download and pre-process an entire Wikipedia dump, using a trained sentencepiece model. (One is provided for the English in the top directory of this repository, at *spm/spm.wiki.*.) As long as an appropriate sentencepiece model is available, the script can be run for any language, using the following command:
 
-    python3 get_wiki_data.py --lang=<str> --spm=<path>
+    python3 get_wiki_data.py --lang=<str>
 
 where the argument of *--lang* is the desired language (e.g. *en* for English, *ml* for Malayalam, etc). 
 
