@@ -20,7 +20,7 @@ def compress_file(file_path):
   os.unlink(file_path)
   print(f"Newly compressed {file_path}.gz created and old {file_path} removed")
 
-def append_json_check_len(dic, file_path):
+def append_txt_check_len(dic, file_path):
   output_file = open(file_path, 'a', encoding='utf-8') 
   if os.path.exists(file_path):
     if os.path.getsize(file_path) < 524288000:
@@ -28,14 +28,13 @@ def append_json_check_len(dic, file_path):
     else:
       path = Path(file_path)
       f = path.parts[-1]
-      name, num = f.split("_")[0], int(f.split("_")[1].replace(".json", ""))
-      j_name = name+"_"+str(num+1)+".json"
+      name, num = f.split("_")[0], int(f.split("_")[1].replace(".txt", ""))
+      j_name = name+"_"+str(num+1)+".txt"
       print(file_path)
       output_file.close()
       compress_file(file_path)
       file_path=str(path).replace(f, "")+j_name
       output_file = open(file_path, 'a', encoding='utf-8')
-  json.dump(dic, output_file)
-  output_file.write("\n")
+  output_file.write("<doc id="+str(c)+" lang="+dic['lang']+" url="+dic['url']+" title="+dic['title']+">"+"\n"+dic['doc']+"\n"+"</doc>"+"\n")
   return file_path
 

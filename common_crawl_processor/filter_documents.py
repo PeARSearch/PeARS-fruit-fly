@@ -49,9 +49,9 @@ def filtering(folder, model, lda_path, keep_discarded):
 	    pass
 	else:
 	    os.makedirs("corpus")
-	j_keep = './corpus/kept_0.json'
+	f_keep = './corpus/kept_0.txt'
 	if keep_discarded == 'True':
-		j_disc= './corpus/discarded_0.json'
+		f_discard= './corpus/discarded_0.txt'
 	n_doc=0
 	n_kept=0
 	f_globs= glob.glob(folder+"*.gz")
@@ -77,11 +77,11 @@ def filtering(folder, model, lda_path, keep_discarded):
 						dic['title']=title
 						dic['url']=url
 						if label != 1:
-							utils.append_json_check_len(dic, j_keep)
+							utils.append_txt_check_len(dic, f_keep)
 							n_kept+=1
 						else:
 							if keep_discarded=='True':
-								j_disc=utils.append_json_check_len(dic, j_disc)
+								f_discard=utils.append_txt_check_len(dic, f_discard)
 						n_doc+=1
 						if n_doc%100==0:
 							print(f"{n_doc} documents checked and {n_kept} documents kept so far...")
@@ -94,7 +94,8 @@ def filtering(folder, model, lda_path, keep_discarded):
 					else:
 						doc=doc+" "+line
 					continue
-	return j_keep
+					
+	return f_keep
 
 if __name__ == '__main__':
   args = docopt(__doc__, version='Common Crawl Processor')
@@ -105,6 +106,6 @@ if __name__ == '__main__':
   lda_path="./"+args['--lda_path']+"/"
   keep_discarded=args['--keep_discarded']
 
-  j_keep=filtering(folder, model, lda_path, keep_discarded)
-  utils.compress_file(j_keep)
+  f_keep=filtering(folder, model, lda_path, keep_discarded)
+  utils.compress_file(f_keep)
 
