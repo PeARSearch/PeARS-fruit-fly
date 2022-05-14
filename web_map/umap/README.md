@@ -44,6 +44,6 @@ This will gather documents from all dump files, together with their respective c
 
 The next and final step is to put the UMAP representations through the fruit fly. To do this, run e.g.:
 
-    python3 apply_umap_fly.py fly --dataset=processed/enwiki-latest-pages-articles1.xml-p1p41242.sp --model=models/umap/enwiki-latest-pages-articles1.xml-p1p41242
+    python3 apply_umap_fly.py fly --dataset=processed/enwiki-latest-pages-articles1.xml-p1p41242 --model=models/umap/enwiki-latest-pages-articles1.xml-p1p41242
 
 where the argument of *--dataset* is the dump file the fly should be trained on (probably again the first dump file), and the argument of *--model* is the path to the previously trained UMAP model. In principle, it is not necessary to train the fly on the file that UMAP was trained on, but it makes good sense. 
