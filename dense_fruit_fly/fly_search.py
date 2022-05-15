@@ -105,9 +105,6 @@ def optimize_fruitfly():
     #print("Score and size after pruning, saved fly:",score, size)
 
     
-
-
-
 if __name__ == '__main__':
     args = docopt(__doc__, version='Hyper-parameter search by Bayesian optimization, ver 0.1')
     dataset = args["--dataset"]
@@ -115,19 +112,19 @@ if __name__ == '__main__':
 
     if dataset == "wiki":
         train_path="../datasets/wikipedia/wikipedia-train.sp"
-        spm_model = "../spm/spm.wiki.model"
-        spm_vocab = "../spm/spm.wiki.vocab"
-        umap_model = joblib.load("./models/umap/wiki.umap")
+        spm_model = "../spm/spm.enwiki.model"
+        spm_vocab = "../spm/spm.enwiki.vocab"
+        # umap_model = joblib.load("./models/umap/wiki.umap")
     if dataset == "20news":
         train_path="../datasets/20news-bydate/20news-bydate-train.sp"
         spm_model = "../spm/spm.20news.model"
         spm_vocab = "../spm/spm.20news.vocab"
-        umap_model = joblib.load("./models/umap/20news.umap")
+        # umap_model = joblib.load("./models/umap/20news.umap")
     if dataset == "wos":
         train_path="../datasets/wos/wos11967-train.sp"
         spm_model = "../spm/spm.wos.model"
         spm_vocab = "../spm/spm.wos.vocab"
-        umap_model = joblib.load("./models/umap/wos.umap")
+        # umap_model = joblib.load("./models/umap/wos.umap")
 
     
     dataset_name = train_path.split('/')[2].split('-')[0]
@@ -144,11 +141,11 @@ if __name__ == '__main__':
     print('reading dataset...')
     train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs, power)
     val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs, power)
-    scaler = preprocessing.MinMaxScaler().fit(train_set.todense())
-    train_set = scaler.transform(train_set.todense())
-    val_set = scaler.transform(val_set.todense())
-    train_set = umap_model.transform(train_set)
-    val_set = umap_model.transform(val_set)
+    # scaler = preprocessing.MinMaxScaler().fit(train_set.todense())
+    # train_set = scaler.transform(train_set.todense())
+    # val_set = scaler.transform(val_set.todense())
+    # train_set = umap_model.transform(train_set)
+    # val_set = umap_model.transform(val_set)
     PN_SIZE = train_set.shape[1]
 
     max_thread = int(multiprocessing.cpu_count() * 0.2)

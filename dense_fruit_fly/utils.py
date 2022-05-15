@@ -72,6 +72,7 @@ def read_n_encode_dataset(path, vectorizer, logprobs, power):
             if l[:4] == "<doc":
                 m = re.search(".*class=([^ ]*)>", l)
                 label = m.group(1)
+                label = label.split("|")
                 label_list.append(label)
             elif l[:5] == "</doc":
                 doc_list.append(doc)
