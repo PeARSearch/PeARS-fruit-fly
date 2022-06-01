@@ -30,6 +30,8 @@ from docopt import docopt
 import sentencepiece as spm
 import pandas as pd
 import numpy as np
+import nltk
+from nltk.corpus import reuters
 
 RANDOM_SEED = 111
 
@@ -402,6 +404,173 @@ def prepare_20news(keep_meta, is_sp_encode, sp_model_path):
     shutil.rmtree('./20news-bydate/20news-bydate-test')
 
 
+############################################ reuters ModApte ################################
+def preprocess_reuters(is_train: bool, keep_meta: bool, is_sp_encode: bool, sp_model_path: str):
+    """
+    :param is_train: True if using train part, False if using test part
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+
+    if is_sp_encode:
+        file_ext = '.sp'
+        if sp_model_path:
+            sp.load(sp_model_path)
+    else:
+        file_ext = '.txt'
+
+    documents = reuters.fileids()
+
+    # split train into train-val
+    if is_train:
+        train = [d for d in documents if d.startswith("training/")]
+        doc_used = [reuters.raw(doc_id) for doc_id in train]
+        label_used = [reuters.categories(doc_id) for doc_id in train]
+        id_used = [doc_id.split('/')[1] for doc_id in train]
+
+        random.Random(RANDOM_SEED).shuffle(doc_used)
+        random.Random(RANDOM_SEED).shuffle(label_used)
+        random.Random(RANDOM_SEED).shuffle(id_used)
+
+        # this dataset has some classes with only 1 doc, and some classes with 2-3 docs
+        # I split the train part to further train-val, in which the further train must contain
+        # all classes (otherwise sklearn will run into error), and maximize the number of classes
+        # for the val part (83)
+        unique_label_train = set()
+        keep_idx_train = []
+        i = 0
+        while len(unique_label_train) < 90:
+            for l in label_used[i]:
+                if l not in unique_label_train:
+                    keep_idx_train.append(i)
+                    unique_label_train.add(l)
+            i += 1
+        keep_idx_train = set(keep_idx_train)
+
+        doc_train, label_train, id_train = [], [], []
+        for j in keep_idx_train:
+            doc_train.append(doc_used[j])
+            label_train.append(label_used[j])
+            id_train.append(id_used[j])
+        for j in keep_idx_train:
+            del doc_used[j]
+            del label_used[j]
+            del id_used[j]
+        # print(len(set([l for labels in label_train for l in labels])))
+
+        unique_label_val = set()
+        keep_idx_val = []
+        i = 0
+        while len(unique_label_val) < 83:
+            for l in label_used[i]:
+                if l not in unique_label_val:
+                    keep_idx_val.append(i)
+                    unique_label_val.add(l)
+            i += 1
+        keep_idx_val = set(keep_idx_val)
+
+        doc_val, label_val, id_val = [], [], []
+        for j in keep_idx_val:
+            doc_val.append(doc_used[j])
+            label_val.append(label_used[j])
+            id_val.append(id_used[j])
+        for j in keep_idx_val:
+            del doc_used[j]
+            del label_used[j]
+            del id_used[j]
+        # print(len(set([l for labels in label_val for l in labels])))
+
+        split = 6000
+        doc_train += doc_used[0: split]
+        label_train += label_used[0: split]
+        id_train += id_used[0: split]
+        doc_val += doc_used[split:]
+        label_val += label_used[split:]
+        id_val += id_used[split:]
+
+        with open(f"./reuters/reuters-train{file_ext}", 'w') as f:
+            for i in range(len(doc_train)):
+                doc = ''
+                if keep_meta:
+                    doc += "<doc id=" + id_train[i] + " class=" + '|'.join(label_train[i]) + ">\n"
+                if is_sp_encode:
+                    doc += ' '.join([wp for wp in sp.encode_as_pieces(doc_train[i].lower())]) + '\n'
+                else:
+                    doc += doc_train[i] + '\n'
+                if keep_meta:
+                    doc += "</doc>\n"
+                f.write(doc)
+        with open(f"./reuters/reuters-val{file_ext}", 'w') as f:
+            for i in range(len(doc_val)):
+                doc = ''
+                if keep_meta:
+                    doc += "<doc id=" + id_val[i] + " class=" + '|'.join(label_val[i]) + ">\n"
+                if is_sp_encode:
+                    doc += ' '.join([wp for wp in sp.encode_as_pieces(doc_val[i].lower())]) + '\n'
+                else:
+                    doc += doc_val[i] + '\n'
+                if keep_meta:
+                    doc += "</doc>\n"
+                f.write(doc)
+
+    else:  # test set
+        test = [d for d in documents if d.startswith("test/")]
+        doc_test = [reuters.raw(doc_id) for doc_id in test]
+        label_test = [reuters.categories(doc_id) for doc_id in test]
+        id_test = [doc_id.split('/')[1] for doc_id in test]
+
+        with open(f"./reuters/reuters-test{file_ext}", 'w') as f:
+            for i in range(len(doc_test)):
+                doc = ''
+                if keep_meta:
+                    doc += "<doc id=" + id_test[i] + " class=" + '|'.join(label_test[i]) + ">\n"
+                if is_sp_encode:
+                    doc += ' '.join([wp for wp in sp.encode_as_pieces(doc_test[i].lower())]) + '\n'
+                else:
+                    doc += doc_test[i] + '\n'
+                if keep_meta:
+                    doc += "</doc>\n"
+                f.write(doc)
+
+    # # write the number of docs in each part
+    # with open('./wos/reuters_stat.txt', 'w') as f:
+    #     f.write(str(len(doc_train)) + ' ' + str(len(doc_val)) + ' ' + str(len(doc_test)))
+
+
+def prepare_reuters(keep_meta, is_sp_encode, sp_model_path):
+    """
+    :param keep_meta: keep the meta tag <id, class> in each document
+    :param is_sp_encode: if use sentencepeice to preprocess documents
+    :param sp_model_path: path to sentencepeice model, only use when is_sp_encode is True
+    """
+
+    print('downloading...')
+    nltk.download('reuters')
+
+    print('processing...')
+    if is_sp_encode:
+        if not sp_model_path:  # need to train sentencepeice
+            # create plain txt file
+            preprocess_reuters(is_train=True,
+                               keep_meta=False,
+                               is_sp_encode=False,
+                               sp_model_path=None)
+            sp_model_path = train_sentencepiece(dataset_name='reuters',
+                                                txt_path='./reuters/reuters-train.txt')
+            os.remove('./reuters/reuters-train.txt')
+            os.remove('./reuters/reuters-val.txt')
+
+    preprocess_reuters(is_train=True, keep_meta=keep_meta,
+                       is_sp_encode=is_sp_encode, sp_model_path=sp_model_path)
+    preprocess_reuters(is_train=False, keep_meta=keep_meta,
+                       is_sp_encode=is_sp_encode, sp_model_path=sp_model_path)
+
+    # # remove unused files and folders
+    # shutil.rmtree('./20news-bydate/20news-bydate-train')
+    # shutil.rmtree('./20news-bydate/20news-bydate-test')
+
+
 if __name__ == '__main__':
     args = docopt(__doc__, version='Fruit Fly Hashing, prepare_datasets 0.1')
     random.seed(RANDOM_SEED)
@@ -442,3 +611,7 @@ if __name__ == '__main__':
                    is_sp_encode=is_sp_encode,
                    sp_model_path=sp_model_path)
 
+    print('\nDataset: Reuters-21578')
+    prepare_reuters(keep_meta=keep_meta,
+                    is_sp_encode=is_sp_encode,
+                    sp_model_path=sp_model_path)
