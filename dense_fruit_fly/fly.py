@@ -31,7 +31,7 @@ class Fly:
         self.kc_in_hash_sorted = None
         #print("INIT",self.kc_size,self.proj_size,self.wta,self.get_coverage())
 
-    def create_projections(self,proj_size):
+    def create_projections(self, proj_size):
         weight_mat = np.zeros((self.kc_size, self.pn_size))
         idx = list(range(self.pn_size))
         random.shuffle(idx)
