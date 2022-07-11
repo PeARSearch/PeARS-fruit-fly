@@ -15,6 +15,7 @@ from docopt import docopt
 import numpy as np
 from sklearn import linear_model
 import pickle
+from sklearn.multioutput import MultiOutputClassifier
 
 #print(device)
 #random.seed(77)
@@ -38,10 +39,14 @@ def make_output(classes,class_ids):
 
 
 def train_model(m_train,classes_train,m_val,classes_val,C,num_iter):
-    lm = linear_model.LogisticRegression(multi_class='ovr', solver='liblinear',
-                                         max_iter=num_iter, C=C, verbose=0)
+    if isinstance(classes_train, np.ndarray):
+        lm = MultiOutputClassifier(linear_model.LogisticRegression())
+    else:
+        lm = linear_model.LogisticRegression(multi_class='ovr', solver='liblinear',
+                                             max_iter=num_iter, C=C, verbose=0)
+    # print(classes_train.shape, np.argwhere(classes_train.sum(axis=0) == 0))
     lm.fit(m_train, classes_train)
-    score = lm.score(m_val,classes_val)
+    score = lm.score(m_val, classes_val)
     # print(lm.predict(m_val))
     # print(score)
     return score, lm
