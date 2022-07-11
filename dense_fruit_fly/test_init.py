@@ -1,6 +1,6 @@
 """Test init strategy
 Usage:
-  fly_search.py --dataset=<str> --logprob=<n>
+  fly_search.py --dataset=<str>
   fly_search.py (-h | --help)
   fly_search.py --version
 
@@ -8,7 +8,6 @@ Options:
   -h --help                    Show this screen.
   --version                    Show version.
   --dataset=<str>              Name of dataset, either wiki, 20news, or wos.
-  --logprob=<n>                Power of word log probabilities when vectorizing documents.
 """
 
 import random
@@ -52,6 +51,8 @@ class FlyTestInit:
             weight_mat, self.shuffled_idx = self.create_projections_2(scale=self.kc_size)
         elif self.init_method == "ach_sqrt_pn":
             weight_mat, self.shuffled_idx = self.create_projections_2(scale=np.sqrt(self.pn_size))
+        elif self.init_method == "favor_order":
+            weight_mat, self.shuffled_idx = self.create_projections_3(proj_size=self.proj_size, favor_order=std_rank)
         else:
             weight_mat, self.shuffled_idx = self.projection_store(proj_store)
 
@@ -112,6 +113,25 @@ class FlyTestInit:
         weight_mat = weight_mat * np.sqrt(scale/self.kc_size)
         return weight_mat, None
 
+    def create_projections_3(self, proj_size, favor_order):  # favor high variance dimensions
+        weight_mat = np.zeros((self.kc_size, self.pn_size))
+        idx = list(np.random.permutation(favor_order[0:1000])) + list(np.random.permutation(favor_order[1000:]))
+        used_idx = idx.copy()
+        c = 0
+
+        while c < self.kc_size:
+            for i in range(0, len(idx), proj_size):
+                p = idx[i:i + proj_size]
+                for j in p:
+                    weight_mat[c][j] = 1 if np.random.random() < 0.5 else -1
+                c += 1
+                if c >= self.kc_size:
+                    break
+            # reshuffle if needed -- if all KCs are not filled
+            idx = list(np.random.permutation(favor_order[0:1000])) + list(np.random.permutation(favor_order[1000:]))
+            used_idx.extend(idx)
+        return weight_mat, used_idx[:self.kc_size * proj_size]
+
 
     def projection_store(self, proj_store):
         weight_mat = np.zeros((self.kc_size, self.pn_size))
@@ -163,8 +183,8 @@ class FlyTestInit:
                                         m_val=hash_val, classes_val=val_label,
                                         C=self.hyperparameters['C'], num_iter=self.hyperparameters['num_iter'])
         #if self.eval_method == "similarity":
-        self.val_score_s, kc_in_hash_sorted = self.prec_at_k(m_val=hash_val, classes_val=val_label,
-                                                           k=self.hyperparameters['num_nns'])
+        self.val_score_s, kc_in_hash_sorted = self.prec_at_k(m_val=hash_val, classes_val=val_label_prec,
+                                                             k=self.hyperparameters['num_nns'])
         self.kc_in_hash_sorted = list(kc_in_hash_sorted)
         self.is_evaluated = True
         # print("\nCOVERAGE:",self.get_coverage())
@@ -181,17 +201,11 @@ class FlyTestInit:
         ranking = np.argsort(-i_sim)
         neighbours = [labels[n] for n in ranking][1:num_nns + 1]  # don't count first neighbour which is itself
         n_sum = 0
-        print("neighbours: ", neighbours)
-        print("i_label", i_label)
+        # print("neighbours: ", neighbours)
+        # print("i_label", i_label)
         for n in neighbours:
             for lab in n:
                 if lab in i_label:
-                    print("lab", lab)
-                    XXX
-                    """
-                    now it's not working for multilabel documents because of 
-                    the one hot encoded labels. Check that!!!!
-                    """
                     n_sum += 1
                     break
         score = n_sum / num_nns
@@ -223,7 +237,7 @@ class FlyTestInit:
 
 def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     # Below parameters are needed to init the fruit fly, even if not used here
-    init_method_list = ['original', 'minus_1', 'ach', 'ach_3', 'ach_kc', 'ach_sqrt_pn']
+    init_method_list = ['original']
     eval_method = ''
     proj_store = None
     hyperparameters = {'C': 100, 'num_iter': 200, 'num_nns': knn}
@@ -270,7 +284,7 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
 if __name__ == '__main__':
     args = docopt(__doc__, version='Test init strategy, ver 0.1')
     dataset = args["--dataset"]
-    power = int(args["--logprob"])
+    power = 1
 
     if dataset == "wiki":
         train_path = "../datasets/wikipedia/wikipedia-train.sp"
@@ -314,23 +328,32 @@ if __name__ == '__main__':
     print('reading dataset...')
     train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs, power)
     val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs, power)
+    val_label_prec = val_label
 
-    if dataset == "tmc" or dataset=="reuters":
+    if dataset == "tmc" or dataset == "reuters":
         labels = set()
         for split in [train_label, val_label]:
             for i in split:
                 for lab in i:
                     labels.add(lab)
         onehotencoder = MultiLabelBinarizer(classes=sorted(labels))
-        train_label = onehotencoder.fit_transform(train_label) #.tolist()
-        val_label = onehotencoder.fit_transform(val_label) #.tolist()
+        train_label = onehotencoder.fit_transform(train_label)  # .tolist()
+        val_label = onehotencoder.fit_transform(val_label)  # .tolist()
+    #     print(labels, len(labels))
+    #
+    # print(val_label.shape, val_label[5:10])
+    # print(np.argwhere(train_label.sum(axis=1) == 0))
+    # print(np.argwhere(val_label.sum(axis=1) == 0))
 
     scaler = preprocessing.MinMaxScaler().fit(train_set.todense())
     train_set = scaler.transform(train_set.todense())
     val_set = scaler.transform(val_set.todense())
+    # train_set = train_set.todense()
+    # val_set = val_set.todense()
     # train_set = umap_model.transform(train_set)
     # val_set = umap_model.transform(val_set)
     PN_SIZE = train_set.shape[1]
+    std_rank = np.argsort(train_set.std(axis=0))[::-1]  # standard deviation from highest to lowest
 
     max_thread = int(multiprocessing.cpu_count() * 0.7)
 
