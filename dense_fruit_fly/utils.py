@@ -116,10 +116,27 @@ def hash_input_vectorized_(pn_mat, weight_mat, percent_hash):
 
 
 def hash_dataset_(dataset_mat, weight_mat, percent_hash):
-    m, n = dataset_mat.shape
     dataset_mat = csr_matrix(dataset_mat)
     hs, kc_use, kc_sorted_ids = hash_input_vectorized_(dataset_mat, weight_mat, percent_hash)
-    hs = (hs > 0).astype(np.int_)
+    # hs = (hs > 0).astype(np.int_)
     return hs, kc_use, kc_sorted_ids
+
+
+# train_doc, train_label = read_n_encode_dataset('./datasets/reuters/reuters-train.txt')
+# val_doc, val_label = read_n_encode_dataset('./datasets/reuters/reuters-val.txt')
+# test_doc, test_label = read_n_encode_dataset('./datasets/reuters/reuters-test.txt')
+# n_train, n_val, n_test = len(train_doc), len(val_doc), len(test_doc)
+# def find_seed(seed):
+#     label_list = train_label + val_label + test_label
+#     random.Random(seed).shuffle(label_list)
+#     new_train_label = label_list[0:n_train]
+#     new_val_label = label_list[n_train:n_train+n_val]
+#     new_test_label = label_list[n_train+n_val:]
+#     unique_labels = set([l for labels in label_list for l in labels])
+#     if set([l for labels in new_train_label for l in labels]) == unique_labels and \
+#         set([l for labels in new_val_label for l in labels]) == unique_labels and \
+#         set([l for labels in new_test_label for l in labels]) == unique_labels:
+#         return 1
+#     return 0
 
 
