@@ -139,9 +139,13 @@ class FlyTestPostProcessing:
 
 
     def evaluate(self, train_set, val_set, train_label, val_label):
-        # # dim reduction
-        # train_set, val_set = dim_reduction(X_train=train_set, X_val=val_set,
-        #                                    n_dim=1000, method='pca')
+        # dim reduction pre
+        if self.dim_reduction_method == 'pca_pre' or self.dim_reduction_method == 'pca_pre_post':
+            train_set, val_set = dim_reduction(X_train=train_set, X_val=val_set,
+                                               n_dim=1000, method='pca')
+            self.pn_size = 1000
+            weight_mat, self.shuffled_idx = self.create_projections(proj_size=self.proj_size)
+            self.projections = lil_matrix(weight_mat)
 
         hash_val, kc_use_val, kc_sorted_val = hash_dataset_(dataset_mat=val_set, weight_mat=self.projections,
                                                             percent_hash=self.wta)
@@ -151,11 +155,18 @@ class FlyTestPostProcessing:
                                                                   weight_mat=self.projections,
                                                                   percent_hash=self.wta)
 
-        # dim reduction
         hash_train = hash_train.toarray()
         hash_val = hash_val.toarray()
-        hash_train, hash_val = dim_reduction(X_train=hash_train, X_val=hash_val,
-                                             n_dim=self.n_dim_reduction, method=self.dim_reduction_method)
+
+        # dim reduction post
+        if self.dim_reduction_method == 'pca_post' or self.dim_reduction_method == 'pca_pre_post':
+            hash_train, hash_val = dim_reduction(X_train=hash_train, X_val=hash_val,
+                                                 n_dim=self.n_dim_reduction, method='pca')
+        if self.dim_reduction_method == 'zero' or self.dim_reduction_method == 'std' \
+                or self.dim_reduction_method == 'entropy' or self.dim_reduction_method == 'umap':
+            hash_train, hash_val = dim_reduction(X_train=hash_train, X_val=hash_val,
+                                                 n_dim=self.n_dim_reduction, method=self.dim_reduction_method)
+
         hash_train = (hash_train > 0).astype(np.int_)
         hash_val = (hash_val > 0).astype(np.int_)
 
@@ -209,8 +220,8 @@ class FlyTestPostProcessing:
 
 def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     # Below parameters are needed to init the fruit fly, even if not used here
-    dim_reduction_list = [None]
-    n_dim_list = [64]
+    dim_reduction_list = [None, 'pca_pre', 'pca_post', 'pca_pre_post', 'umap', 'zero', 'std', 'entropy']
+    n_dim_list = [64, 128]
     eval_method = ''
     proj_store = None
     hyperparameters = {'C': 100, 'num_iter': 200, 'num_nns': knn}
@@ -252,8 +263,8 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     #     filename = './models/flies/' + dataset + '.fly_s.m'
     #     joblib.dump(best_fly_s, filename)
 
-    print(avg_score_c)
-    print(avg_score_s)
+    print('classification scores:\n', avg_score_c)
+    print('pre@k score:\n', avg_score_s)
     return avg_score_c, avg_score_s
 
 
@@ -325,10 +336,12 @@ if __name__ == '__main__':
     # val_set = umap_model.predict(val_set)
     input_train, _ = vectorize_scale(lang=dataset, spf=train_path, logprob_power=7, top_words=500)
     input_val, _ = vectorize_scale(lang=dataset, spf=train_path.replace('train', 'val'), logprob_power=7, top_words=500)
-    ridge_model = joblib.load(f'./models/umap/{dataset}/ridge_{dataset}')
-    train_set = ridge_model.predict(input_train)
-    val_set = ridge_model.predict(input_val)
+    # ridge_model = joblib.load(f'./models/umap/{dataset}/ridge_{dataset}')
+    # train_set = ridge_model.predict(input_train)
+    # val_set = ridge_model.predict(input_val)
     # std_rank = np.argsort(train_set.std(axis=0))[::-1]  # standard deviation from highest to lowest
+    train_set = input_train
+    val_set = input_val
 
     PN_SIZE = train_set.shape[1]
 

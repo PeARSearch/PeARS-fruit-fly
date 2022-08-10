@@ -237,7 +237,7 @@ class FlyTestInit:
 
 def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     # Below parameters are needed to init the fruit fly, even if not used here
-    init_method_list = ['original']
+    init_method_list = ['original', 'minus_1', 'ach', 'ach_3', 'ach_kc', 'ach_sqrt_pn', 'favor_order']
     eval_method = ''
     proj_store = None
     hyperparameters = {'C': 100, 'num_iter': 200, 'num_nns': knn}
@@ -257,7 +257,7 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     # average the validation acc
     avg_score_c = np.mean(score_c_list, axis=1)
     std_score_c = np.std(score_c_list, axis=1)
-    print('average score c:')
+    print('average score classification:')
     for i in avg_score_c: print(round(i, 3))
 
     # best_score_c = max(score_c_list)
@@ -269,7 +269,7 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     # average the validation acc
     avg_score_s = np.mean(score_s_list, axis=1)
     std_score_s = np.std(score_s_list, axis=1)
-    print('average score s:')
+    print('average score pre@k:')
     for i in avg_score_s: print(round(i, 3))
 
     # best_score_s = max(score_s_list)
@@ -358,7 +358,7 @@ if __name__ == '__main__':
     max_thread = int(multiprocessing.cpu_count() * 0.7)
 
     print('testing...')
-    for kc_size in [64, 128, 256]:
+    for kc_size in [64, 128]:
         print('kc size =', kc_size)
         tmp = fruitfly_pipeline(kc_size=kc_size, proj_size=5, wta=50, knn=100, num_trial=10, save=False)
         # print(tmp)
