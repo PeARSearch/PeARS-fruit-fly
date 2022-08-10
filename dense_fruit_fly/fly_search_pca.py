@@ -92,7 +92,22 @@ class FlyPCA:
             used_idx.extend(idx)
         return weight_mat, used_idx[:self.kc_size * proj_size]
 
+
     def evaluate(self, train_set, val_set, train_label, val_label):
+        def _parallel_eval(hash_train, hash_val, n_dim_reduction):
+            hash_train, hash_val = dim_reduction_pca(X_train=hash_train, X_val=hash_val, n_dim=n_dim_reduction)
+            hash_train = (hash_train > 0).astype(np.int_)
+            hash_val = (hash_val > 0).astype(np.int_)
+            if self.eval_method == 'similarity':
+                val_score_s, _ = self.prec_at_k(m_val=hash_val, classes_val=val_label_prec,
+                                                k=self.hyperparameters['num_nns'])
+                return val_score_s
+            else:  # classification
+                val_score_c, _ = train_model(m_train=hash_train, classes_train=train_label,
+                                             m_val=hash_val, classes_val=val_label,
+                                             C=self.hyperparameters['C'], num_iter=self.hyperparameters['num_iter'])
+                return val_score_c
+
         # # dim reduction
         # train_set, val_set = dim_reduction(X_train=train_set, X_val=val_set,
         #                                    n_dim=1000, method='pca')
@@ -105,18 +120,32 @@ class FlyPCA:
                                                                   weight_mat=self.projections,
                                                                   percent_hash=self.wta)
 
+        # dim reduction
         hash_train = hash_train.toarray()
         hash_val = hash_val.toarray()
-        hash_train = (hash_train > 0).astype(np.int_)
-        hash_val = (hash_val > 0).astype(np.int_)
+        # # hash_train, hash_val = dim_reduction(X_train=hash_train, X_val=hash_val,
+        # #                                      n_dim=self.n_dim_reduction, method=self.dim_reduction_method)
+        # hash_train = (hash_train > 0).astype(np.int_)
+        # hash_val = (hash_val > 0).astype(np.int_)
+        #
+        # # self.val_score_c, _ = train_model(m_train=hash_train, classes_train=train_label,
+        # #                                 m_val=hash_val, classes_val=val_label,
+        # #                                 C=self.hyperparameters['C'], num_iter=self.hyperparameters['num_iter'])
+        # #if self.eval_method == "similarity":
+        # self.val_score_s, kc_in_hash_sorted = self.prec_at_k(m_val=hash_val, classes_val=val_label_prec,
+        #                                                      k=self.hyperparameters['num_nns'])
+        # self.kc_in_hash_sorted = list(kc_in_hash_sorted)
+        # self.is_evaluated = True
+        # self.kc_use_sorted = list(kc_sorted_val)
 
+        with Parallel(n_jobs=3, prefer="threads") as parallel:
+            delayed_funcs = [delayed(_parallel_eval)(hash_train, hash_val, n_dim_reduction) for n_dim_reduction in
+                             [32, 64, 128]]
+            scores = parallel(delayed_funcs)
         if self.eval_method == 'similarity':
-            self.val_score_s, _ = self.prec_at_k(m_val=hash_val, classes_val=val_label_prec,
-                                       k=self.hyperparameters['num_nns'])
-        else:  # classification
-            self.val_score_c, _ = train_model(m_train=hash_train, classes_train=train_label,
-                                    m_val=hash_val, classes_val=val_label,
-                                    C=self.hyperparameters['C'], num_iter=self.hyperparameters['num_iter'])
+            self.val_score_s = scores
+        else:
+            self.val_score_c = scores
 
         return self.val_score_c, self.val_score_s#, self.kc_use_sorted, self.kc_in_hash_sorted
         # return np.random.random(), np.random.random()
@@ -159,7 +188,7 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, C, save):
     # eval_method = 'similarity'
     eval_method = 'classification'
     proj_store = None
-    hyperparameters = {'C': C, 'num_iter': 200, 'num_nns': knn}
+    hyperparameters = {'C': C, 'num_iter': 400, 'num_nns': knn}
 
     fly_list = [FlyPCA(pn_size=PN_SIZE, kc_size=kc_size, wta=wta, proj_size=proj_size,
                        eval_method=eval_method, hyperparameters=hyperparameters) for _ in range(num_trial)]
@@ -185,7 +214,7 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, C, save):
 
     if save:
         best_score = np.max(score_list)
-        best_fly = fly_list[np.argmax(score_list)]
+        best_fly = fly_list[np.argmax(score_list) // len(fly_list)]  # argmax returns flattened index
         filename = './models/flies/'+dataset+'.fly.m'
         joblib.dump(best_fly, filename)
 
@@ -194,7 +223,7 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, C, save):
 
 def optimize_fruitfly():
     knn = 100
-    num_trial = 3
+    num_trial = 5
     def _evaluate(kc_size, wta, proj_size, C):
         kc_size = round(kc_size)
         proj_size = round(proj_size)
@@ -211,16 +240,16 @@ def optimize_fruitfly():
         verbose=2
     )
 
-    tmp_log_path = f'./log/bayes_opt/logs_{dataset_name}_fly_{knn}.json'
+    tmp_log_path = f'./log/bayes_opt/new_logs_{dataset_name}_fly_{knn}.json'
     logger = JSONLogger(path=tmp_log_path)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-    tracker = OfflineEmissionsTracker(project_name='Fruitfly_BO_' + dataset_name,
+    tracker = OfflineEmissionsTracker(project_name='Fruitfly_BO_PCA_' + dataset_name,
                                       country_iso_code="ITA",
                                       measure_power_secs=60*5,
                                       output_dir='./log/emissions_tracker')
     tracker.start()
-    optimizer.maximize(init_points=50, n_iter=200)
+    optimizer.maximize(init_points=20, n_iter=30)
     tracker.stop()
     print("Final result:", optimizer.max['target'])
 
@@ -282,9 +311,6 @@ if __name__ == '__main__':
     print('reading dataset...')
     train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs, power)
     val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs, power)
-    # test_set, test_label = read_n_encode_dataset(train_path.replace('train', 'test'), vectorizer, logprobs, power)
-    # n_total = train_set.shape[0] + val_set.shape[0] + test_set.shape[0]
-    # print(n_total, train_set.shape[0]/n_total, val_set.shape[0]/n_total, test_set.shape[0]/n_total)
     val_label_prec = val_label
 
     if dataset == "tmc" or dataset == "reuters":

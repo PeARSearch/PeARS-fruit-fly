@@ -1,13 +1,18 @@
-"""Hyper-parameter search by Bayesian optimization
+"""Test fly
 Usage:
-  fly_search.py --dataset=<str>
-  fly_search.py (-h | --help)
-  fly_search.py --version
+  test_fly_new.py --dataset=<str> --mode=<str> --kc=<int> --proj_size=<int> --wta=<int> --C=<int>
+  test_fly_new.py (-h | --help)
+  test_fly_new.py --version
 
 Options:
   -h --help                    Show this screen.
   --version                    Show version.
   --dataset=<str>              Name of dataset, either wiki, 20news, or wos.
+  --mode=<str>                 .
+  --kc=<int>                   .
+  --proj_size=<int>            .
+  --wta=<int>                  .
+  --C=<int>                    .
 """
 
 
@@ -15,7 +20,7 @@ import os
 import re
 import pathlib
 import joblib
-from joblib import Parallel, delayed,dump
+from joblib import Parallel, delayed, dump
 import random
 import multiprocessing
 import sentencepiece as spm
@@ -28,26 +33,12 @@ from scipy.sparse import csr_matrix
 from scipy.sparse import hstack, vstack, lil_matrix, coo_matrix
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics import pairwise_distances
-from sklearn.decomposition import PCA
-
-from bayes_opt import BayesianOptimization
-from bayes_opt.logger import JSONLogger
-from bayes_opt.event import Events
-from bayes_opt.util import load_logs
 
 from codecarbon import OfflineEmissionsTracker
 
 from classify import train_model
 from utils import read_vocab, hash_dataset_, read_n_encode_dataset
 # from fly import Fly
-
-
-def dim_reduction_pca(X_train, X_val, n_dim):
-    pca = PCA(n_components=n_dim)
-    pca.fit(X_train)
-    X_train_tf = pca.transform(X_train)
-    X_val_tf = pca.transform(X_val)
-    return X_train_tf, X_val_tf
 
 
 class FlyPCA:
@@ -152,14 +143,12 @@ class FlyPCA:
         return np.mean(scores), kc_sorted_hash_use
 
 
-def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, C, save):
+def fruitfly_pipeline(eval_method, kc_size, proj_size, wta, knn, num_trial, C, save):
 
     #Below parameters are needed to init the fruit fly, even if not used here
     init_method = 'random'
-    # eval_method = 'similarity'
-    eval_method = 'classification'
     proj_store = None
-    hyperparameters = {'C': C, 'num_iter': 200, 'num_nns': knn}
+    hyperparameters = {'C': C, 'num_iter': 400, 'num_nns': knn}
 
     fly_list = [FlyPCA(pn_size=PN_SIZE, kc_size=kc_size, wta=wta, proj_size=proj_size,
                        eval_method=eval_method, hyperparameters=hyperparameters) for _ in range(num_trial)]
@@ -192,51 +181,14 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, C, save):
     return avg_score
 
 
-def optimize_fruitfly():
-    knn = 100
-    num_trial = 3
-    def _evaluate(kc_size, wta, proj_size, C):
-        kc_size = round(kc_size)
-        proj_size = round(proj_size)
-        wta = round(wta)
-        print(f'--- kc_size {kc_size}, wta {wta}, proj_size {proj_size}, knn {knn}, C {C} ')
-        score_list = fruitfly_pipeline(kc_size=kc_size, proj_size=proj_size, wta=wta,
-                                       knn=knn, num_trial=num_trial, C=C, save=False)
-        return np.sum(score_list)
-
-    optimizer = BayesianOptimization(
-        f=_evaluate,
-        pbounds={"kc_size": (500, 15000), "proj_size": (2, 10), "wta": (1, 100), "C": (1, 100)},
-        random_state=1234,
-        verbose=2
-    )
-
-    tmp_log_path = f'./log/bayes_opt/logs_{dataset_name}_fly_{knn}.json'
-    logger = JSONLogger(path=tmp_log_path)
-    optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
-
-    tracker = OfflineEmissionsTracker(project_name='Fruitfly_BO_' + dataset_name,
-                                      country_iso_code="ITA",
-                                      measure_power_secs=60*5,
-                                      output_dir='./log/emissions_tracker')
-    tracker.start()
-    optimizer.maximize(init_points=50, n_iter=200)
-    tracker.stop()
-    print("Final result:", optimizer.max['target'])
-
-    # Saving a fly with the best params
-    params = optimizer.max['params']
-    print(params)
-    score = fruitfly_pipeline(kc_size=round(params['kc_size']), proj_size=round(params['proj_size']),
-                              wta=round(params['wta']), knn=knn, num_trial=num_trial, C=params['C'], save=True)
-    print("Best fly score:", score, ". Fly saved.")
-    #score, size = fly.prune(train_set,val_set,train_label,val_label)
-    #print("Score and size after pruning, saved fly:",score, size)
-
-
 if __name__ == '__main__':
-    args = docopt(__doc__, version='Hyper-parameter search by Bayesian optimization, ver 0.1')
+    args = docopt(__doc__, version='Test fly, ver 0.1')
     dataset = args["--dataset"]
+    eval_method = args['--mode']
+    kc_size = int(args['--kc'])
+    proj_size = int(args['--proj_size'])
+    wta = int(args['--wta'])
+    C = int(args['--C'])
     power = 5
 
     if dataset == "wiki" or dataset == "enwiki":
@@ -270,8 +222,8 @@ if __name__ == '__main__':
     dataset_name = train_path.split('/')[2].split('-')[0]
     print('Dataset name:', dataset_name)
 
-    pathlib.Path('./log/bayes_opt').mkdir(parents=True, exist_ok=True)
-    pathlib.Path('./log/emissions_tracker').mkdir(parents=True, exist_ok=True)
+    # pathlib.Path('./log/bayes_opt').mkdir(parents=True, exist_ok=True)
+    # pathlib.Path('./log/emissions_tracker').mkdir(parents=True, exist_ok=True)
 
     # global variables
     sp = spm.SentencePieceProcessor()
@@ -281,7 +233,7 @@ if __name__ == '__main__':
 
     print('reading dataset...')
     train_set, train_label = read_n_encode_dataset(train_path, vectorizer, logprobs, power)
-    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'val'), vectorizer, logprobs, power)
+    val_set, val_label = read_n_encode_dataset(train_path.replace('train', 'test'), vectorizer, logprobs, power)
     # test_set, test_label = read_n_encode_dataset(train_path.replace('train', 'test'), vectorizer, logprobs, power)
     # n_total = train_set.shape[0] + val_set.shape[0] + test_set.shape[0]
     # print(n_total, train_set.shape[0]/n_total, val_set.shape[0]/n_total, test_set.shape[0]/n_total)
@@ -305,5 +257,6 @@ if __name__ == '__main__':
 
     max_thread = int(multiprocessing.cpu_count() * 0.12)
 
-    # search
-    optimize_fruitfly()
+    # test
+    fruitfly_pipeline(eval_method=eval_method, kc_size=kc_size, proj_size=proj_size,
+                      wta=wta, knn=100, num_trial=5, C=C, save=False)

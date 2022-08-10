@@ -108,6 +108,10 @@ venv.bak/
 datasets/20news-bydate/
 datasets/wos/
 datasets/wikipedia/
+datasets/tmc
+datasets/reuters
+datasets/agnews
+
 web_map/metacat_eval/wiki_cats/
 web_map/metacat_eval/links/*gz
 web_map/pod_starter/wiki_cats/

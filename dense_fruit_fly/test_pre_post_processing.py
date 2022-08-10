@@ -21,41 +21,72 @@ from sklearn import preprocessing
 from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import lil_matrix
 from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from umap import UMAP
+from scipy.stats import entropy
 
 from classify import train_model
 from sklearn.metrics import pairwise_distances
 from utils import read_vocab, hash_dataset_, read_n_encode_dataset
+from vectorizer import vectorize_scale
 import warnings
 warnings.filterwarnings("ignore")
 
 
-class FlyTestInit:
-    def __init__(self, pn_size=None, kc_size=None, wta=None, proj_size=None, init_method=None, eval_method=None,
-                 proj_store=None, hyperparameters=None):
+def dim_reduction(X_train, X_val, n_dim, method=None):
+    if method == 'pca':
+        pca = PCA(n_components=n_dim)
+        pca.fit(X_train)
+        X_train_tf = pca.transform(X_train)
+        X_val_tf = pca.transform(X_val)
+        return X_train_tf, X_val_tf
+    if method == 'tsne':
+        tsne = TSNE(n_components=n_dim, method='exact', n_iter=300)
+        X_train_tf = tsne.fit_transform(X_train)
+        X_val_tf = tsne.fit_transform(X_val)
+        return X_train_tf, X_val_tf
+    if method == 'umap':
+        umap = UMAP(n_neighbors=10, min_dist=0, n_components=n_dim, metric='hellinger').fit(X_train)
+        X_train_tf = umap.transform(X_train)
+        X_val_tf = umap.transform(X_val)
+        return X_train_tf, X_val_tf
+    if method == 'zero':
+        zero_stat = np.count_nonzero(X_train, axis=0)
+        keep_idx = np.argpartition(zero_stat, n_dim)[:n_dim]
+        X_train_prune = X_train[:, keep_idx]
+        X_val_prune = X_val[:, keep_idx]
+        return X_train_prune, X_val_prune
+    if method == 'std':
+        std_stat = np.std(X_train, axis=0)
+        keep_idx = np.argpartition(std_stat, -n_dim)[-n_dim:]
+        X_train_prune = X_train[:, keep_idx]
+        X_val_prune = X_val[:, keep_idx]
+        return X_train_prune, X_val_prune
+    if method == 'entropy':
+        entropy_stat = entropy(X_train + np.finfo(float).eps, base=2, axis=0)
+        keep_idx = np.argpartition(entropy_stat, -n_dim)[-n_dim:]
+        X_train_prune = X_train[:, keep_idx]
+        X_val_prune = X_val[:, keep_idx]
+        return X_train_prune, X_val_prune
+    return X_train, X_val
+
+
+# def imp_classify():  # imp = iterative magnitude pruning
+
+
+
+class FlyTestPostProcessing:
+    def __init__(self, pn_size=None, kc_size=None, wta=None, proj_size=None, dim_reduction_method=None, n_dim_reduction=None,
+                 eval_method=None, proj_store=None, hyperparameters=None):
         self.pn_size = pn_size
         self.kc_size = kc_size
         self.wta = wta
         self.proj_size = proj_size
-        self.init_method = init_method
         self.eval_method = eval_method
         self.hyperparameters = hyperparameters
-        if self.init_method == "original":
-            weight_mat, self.shuffled_idx = self.create_projections(self.proj_size)
-        elif self.init_method == "minus_1":
-            weight_mat, self.shuffled_idx = self.create_projections_0(self.proj_size)
-        elif self.init_method == "ach":
-            weight_mat, self.shuffled_idx = self.create_projections_1()
-        elif self.init_method == "ach_3":
-            weight_mat, self.shuffled_idx = self.create_projections_2(scale=3)
-        elif self.init_method == "ach_kc":
-            weight_mat, self.shuffled_idx = self.create_projections_2(scale=self.kc_size)
-        elif self.init_method == "ach_sqrt_pn":
-            weight_mat, self.shuffled_idx = self.create_projections_2(scale=np.sqrt(self.pn_size))
-        elif self.init_method == "favor_order":
-            weight_mat, self.shuffled_idx = self.create_projections_3(proj_size=self.proj_size, favor_order=std_rank)
-        else:
-            weight_mat, self.shuffled_idx = self.projection_store(proj_store)
-
+        weight_mat, self.shuffled_idx = self.create_projections(proj_size=self.proj_size)
+        # weight_mat, self.shuffled_idx = self.create_projections_3(proj_size=self.proj_size, favor_order=std_rank)
         self.projections = lil_matrix(weight_mat)
         self.val_score_c = 0
         self.val_score_s = 0
@@ -63,6 +94,9 @@ class FlyTestInit:
         self.kc_use_sorted = None
         self.kc_in_hash_sorted = None
         # print("INIT",self.kc_size,self.proj_size,self.wta,self.get_coverage())
+
+        self.dim_reduction_method = dim_reduction_method
+        self.n_dim_reduction = n_dim_reduction
 
 
     def create_projections(self, proj_size):
@@ -84,35 +118,6 @@ class FlyTestInit:
             used_idx.extend(idx)
         return weight_mat, used_idx[:self.kc_size * proj_size]
 
-    def create_projections_0(self, proj_size):  # introduce -1
-        weight_mat = np.zeros((self.kc_size, self.pn_size))
-        idx = list(range(self.pn_size))
-        random.shuffle(idx)
-        used_idx = idx.copy()
-        c = 0
-
-        while c < self.kc_size:
-            for i in range(0, len(idx), proj_size):
-                p = idx[i:i + proj_size]
-                for j in p:
-                    weight_mat[c][j] = 1 if np.random.random() < 0.5 else -1
-                c += 1
-                if c >= self.kc_size:
-                    break
-            random.shuffle(idx)  # reshuffle if needed -- if all KCs are not filled
-            used_idx.extend(idx)
-        return weight_mat, used_idx[:self.kc_size * proj_size]
-
-    def create_projections_1(self):  # Achlioptas without scale
-        weight_mat = np.random.choice([-1, 0, 1], size=(self.kc_size, self.pn_size), p=[1/6, 2/3, 1/6])
-        return weight_mat, None
-
-    def create_projections_2(self, scale):  # Achlioptas with scale
-        proportion = [1/(2*scale), 1 - 1/scale, 1/(2*scale)]
-        weight_mat = np.random.choice([-1, 0, 1], size=(self.kc_size, self.pn_size), p=proportion)
-        weight_mat = weight_mat * np.sqrt(scale/self.kc_size)
-        return weight_mat, None
-
     def create_projections_3(self, proj_size, favor_order):  # favor high variance dimensions
         weight_mat = np.zeros((self.kc_size, self.pn_size))
         idx = list(np.random.permutation(favor_order[0:1000])) + list(np.random.permutation(favor_order[1000:]))
@@ -133,45 +138,15 @@ class FlyTestInit:
         return weight_mat, used_idx[:self.kc_size * proj_size]
 
 
-    def projection_store(self, proj_store):
-        weight_mat = np.zeros((self.kc_size, self.pn_size))
-        self.proj_store = proj_store.copy()
-        proj_size = len(self.proj_store[0])
-        random.shuffle(self.proj_store)
-        sidx = [pn for p in self.proj_store for pn in p]
-        idx = list(range(self.pn_size))
-        not_in_store_idx = list(set(idx) - set(sidx))
-        # print(len(not_in_store_idx),'IDs not in store')
-        used_idx = sidx.copy()
-        c = 0
-
-        while c < self.kc_size:
-            for i in range(len(self.proj_store)):
-                p = self.proj_store[i]
-                for j in p:
-                    weight_mat[c][j] = 1
-                c += 1
-                if c >= self.kc_size:
-                    break
-            random.shuffle(idx)  # add random if needed -- if all KCs are not filled
-            used_idx.extend(idx)
-        return weight_mat, used_idx[:self.kc_size * proj_size]
-
-    def get_coverage(self):
-        ps = self.projections.toarray()
-        vocab_cov = (self.pn_size - np.where(~ps.any(axis=0))[0].shape[0]) / self.pn_size
-        kc_cov = (self.kc_size - np.where(~ps.any(axis=1))[0].shape[0]) / self.kc_size
-        return vocab_cov, kc_cov
-
-    # def get_fitness(self):
-    #     if not self.is_evaluated:
-    #         return 0
-    #     if DATASET == "all":
-    #         return np.mean(self.val_scores)
-    #     else:
-    #         return np.sum(self.val_scores)
-
     def evaluate(self, train_set, val_set, train_label, val_label):
+        # dim reduction pre
+        if self.dim_reduction_method == 'pca_pre' or self.dim_reduction_method == 'pca_pre_post':
+            train_set, val_set = dim_reduction(X_train=train_set, X_val=val_set,
+                                               n_dim=1000, method='pca')
+            self.pn_size = 1000
+            weight_mat, self.shuffled_idx = self.create_projections(proj_size=self.proj_size)
+            self.projections = lil_matrix(weight_mat)
+
         hash_val, kc_use_val, kc_sorted_val = hash_dataset_(dataset_mat=val_set, weight_mat=self.projections,
                                                             percent_hash=self.wta)
         # if self.eval_method == "classification":
@@ -179,6 +154,22 @@ class FlyTestInit:
         hash_train, kc_use_train, kc_sorted_train = hash_dataset_(dataset_mat=train_set,
                                                                   weight_mat=self.projections,
                                                                   percent_hash=self.wta)
+
+        hash_train = hash_train.toarray()
+        hash_val = hash_val.toarray()
+
+        # dim reduction post
+        if self.dim_reduction_method == 'pca_post' or self.dim_reduction_method == 'pca_pre_post':
+            hash_train, hash_val = dim_reduction(X_train=hash_train, X_val=hash_val,
+                                                 n_dim=self.n_dim_reduction, method='pca')
+        if self.dim_reduction_method == 'zero' or self.dim_reduction_method == 'std' \
+                or self.dim_reduction_method == 'entropy' or self.dim_reduction_method == 'umap':
+            hash_train, hash_val = dim_reduction(X_train=hash_train, X_val=hash_val,
+                                                 n_dim=self.n_dim_reduction, method=self.dim_reduction_method)
+
+        hash_train = (hash_train > 0).astype(np.int_)
+        hash_val = (hash_val > 0).astype(np.int_)
+
         self.val_score_c, _ = train_model(m_train=hash_train, classes_train=train_label,
                                         m_val=hash_val, classes_val=val_label,
                                         C=self.hyperparameters['C'], num_iter=self.hyperparameters['num_iter'])
@@ -194,6 +185,7 @@ class FlyTestInit:
         # print("PROJECTIONS:",self.print_projections())
         # print("KC USE:",np.sort(self.kc_use)[::-1][:20])
         return self.val_score_c, self.val_score_s#, self.kc_use_sorted, self.kc_in_hash_sorted
+        # return np.random.random(), np.random.random()
 
     def compute_nearest_neighbours(self, hammings, labels, i, num_nns):
         i_sim = np.array(hammings[i])
@@ -212,12 +204,12 @@ class FlyTestInit:
         return score, neighbours
 
     def prec_at_k(self, m_val=None, classes_val=None, k=None):
-        hammings = 1 - pairwise_distances(m_val.todense(), metric="hamming")
+        hammings = 1 - pairwise_distances(m_val, metric="hamming")
         kc_hash_use = np.zeros(m_val.shape[1])
         scores = []
         for i in range(hammings.shape[0]):
             score, neighbours = self.compute_nearest_neighbours(hammings, classes_val, i, k)
-            for idx in m_val[i].indices:
+            for idx in np.nonzero(m_val[i] == 0)[0]: #m_val[i].indices:
                 kc_hash_use[idx] += 1
             scores.append(score)
         kc_hash_use = kc_hash_use / sum(kc_hash_use)
@@ -225,25 +217,18 @@ class FlyTestInit:
                              :-kc_hash_use.shape[0] - 1:-1]  # Give sorted list from most to least used KCs
         return np.mean(scores), kc_sorted_hash_use
 
-    def print_projections(self):
-        words = ''
-        for row in self.projections[:10]:
-            cs = np.where(row.toarray()[0] == 1)[0]
-            for i in cs:
-                words += reverse_vocab[i] + ' '
-            words += '|'
-        return words
-
 
 def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     # Below parameters are needed to init the fruit fly, even if not used here
-    init_method_list = ['original', 'minus_1', 'ach', 'ach_3', 'ach_kc', 'ach_sqrt_pn', 'favor_order']
+    dim_reduction_list = [None, 'pca_pre', 'pca_post', 'pca_pre_post', 'umap', 'zero', 'std', 'entropy']
+    n_dim_list = [64, 128]
     eval_method = ''
     proj_store = None
     hyperparameters = {'C': 100, 'num_iter': 200, 'num_nns': knn}
 
-    fly_list = [FlyTestInit(PN_SIZE, kc_size, wta, proj_size, init_method, eval_method, proj_store, hyperparameters)
-                for init_method in init_method_list for _ in range(num_trial)]
+    fly_list = [FlyTestPostProcessing(PN_SIZE, kc_size, wta, proj_size, dim_reduction_method, n_dim, eval_method, proj_store, hyperparameters)
+                for dim_reduction_method in dim_reduction_list for n_dim in n_dim_list for _ in range(num_trial)]
+    print('total', len(fly_list), 'flies')
     print('evaluating...')
 
     with joblib.Parallel(n_jobs=max_thread, prefer="threads") as parallel:
@@ -251,14 +236,14 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
                          fly_list]
         scores = parallel(delayed_funcs)
 
-    score_c_list = np.array([p[0] for p in scores]).reshape(len(init_method_list), num_trial)
-    score_s_list = np.array([p[1] for p in scores]).reshape(len(init_method_list), num_trial)
+    score_c_list = np.array([p[0] for p in scores]).reshape([len(dim_reduction_list), len(n_dim_list), num_trial])
+    score_s_list = np.array([p[1] for p in scores]).reshape([len(dim_reduction_list), len(n_dim_list), num_trial])
 
     # average the validation acc
-    avg_score_c = np.mean(score_c_list, axis=1)
-    std_score_c = np.std(score_c_list, axis=1)
-    print('average score classification:')
-    for i in avg_score_c: print(round(i, 3))
+    avg_score_c = np.mean(score_c_list, axis=2)
+    std_score_c = np.std(score_c_list, axis=2)
+    # print('average score c:')
+    # for i in avg_score_c: print(round(i, 3))
 
     # best_score_c = max(score_c_list)
     # best_fly_c = fly_list[score_c_list.index(best_score_c)]
@@ -267,10 +252,10 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     #     joblib.dump(best_fly_c, filename)
 
     # average the validation acc
-    avg_score_s = np.mean(score_s_list, axis=1)
-    std_score_s = np.std(score_s_list, axis=1)
-    print('average score pre@k:')
-    for i in avg_score_s: print(round(i, 3))
+    avg_score_s = np.mean(score_s_list, axis=2)
+    std_score_s = np.std(score_s_list, axis=2)
+    # print('average score s:')
+    # for i in avg_score_s: print(round(i, 3))
 
     # best_score_s = max(score_s_list)
     # best_fly_s = fly_list[score_s_list.index(best_score_s)]
@@ -278,15 +263,17 @@ def fruitfly_pipeline(kc_size, proj_size, wta, knn, num_trial, save):
     #     filename = './models/flies/' + dataset + '.fly_s.m'
     #     joblib.dump(best_fly_s, filename)
 
+    print('classification scores:\n', avg_score_c)
+    print('pre@k score:\n', avg_score_s)
     return avg_score_c, avg_score_s
 
 
 if __name__ == '__main__':
-    args = docopt(__doc__, version='Test init strategy, ver 0.1')
+    args = docopt(__doc__, version='Test post processing strategy, ver 0.1')
     dataset = args["--dataset"]
     power = 1
 
-    if dataset == "wiki":
+    if dataset == "wiki" or dataset == "enwiki":
         train_path = "../datasets/wikipedia/wikipedia-train.sp"
         spm_model = "../spm/spm.enwiki.model"
         spm_vocab = "../spm/spm.enwiki.vocab"
@@ -339,26 +326,26 @@ if __name__ == '__main__':
         onehotencoder = MultiLabelBinarizer(classes=sorted(labels))
         train_label = onehotencoder.fit_transform(train_label)  # .tolist()
         val_label = onehotencoder.fit_transform(val_label)  # .tolist()
-    #     print(labels, len(labels))
-    #
-    # print(val_label.shape, val_label[5:10])
-    # print(np.argwhere(train_label.sum(axis=1) == 0))
-    # print(np.argwhere(val_label.sum(axis=1) == 0))
 
-    scaler = preprocessing.MinMaxScaler().fit(train_set.todense())
-    train_set = scaler.transform(train_set.todense())
-    val_set = scaler.transform(val_set.todense())
-    # train_set = train_set.todense()
-    # val_set = val_set.todense()
-    # train_set = umap_model.transform(train_set)
-    # val_set = umap_model.transform(val_set)
+    # scaler = preprocessing.MinMaxScaler().fit(train_set.todense())
+    # train_set = scaler.transform(train_set.todense())
+    # val_set = scaler.transform(val_set.todense())
+
+    # umap_model = joblib.load("./models/umap/enwiki-latest-pages-articles.train.hacked.umap")
+    # train_set = umap_model.predict(train_set)
+    # val_set = umap_model.predict(val_set)
+    input_train, _ = vectorize_scale(lang=dataset, spf=train_path, logprob_power=7, top_words=500)
+    input_val, _ = vectorize_scale(lang=dataset, spf=train_path.replace('train', 'val'), logprob_power=7, top_words=500)
+    # ridge_model = joblib.load(f'./models/umap/{dataset}/ridge_{dataset}')
+    # train_set = ridge_model.predict(input_train)
+    # val_set = ridge_model.predict(input_val)
+    # std_rank = np.argsort(train_set.std(axis=0))[::-1]  # standard deviation from highest to lowest
+    train_set = input_train
+    val_set = input_val
+
     PN_SIZE = train_set.shape[1]
-    std_rank = np.argsort(train_set.std(axis=0))[::-1]  # standard deviation from highest to lowest
 
     max_thread = int(multiprocessing.cpu_count() * 0.7)
 
     print('testing...')
-    for kc_size in [64, 128]:
-        print('kc size =', kc_size)
-        tmp = fruitfly_pipeline(kc_size=kc_size, proj_size=5, wta=50, knn=100, num_trial=10, save=False)
-        # print(tmp)
+    tmp = fruitfly_pipeline(kc_size=10000, proj_size=5, wta=50, knn=100, num_trial=5, save=False)
